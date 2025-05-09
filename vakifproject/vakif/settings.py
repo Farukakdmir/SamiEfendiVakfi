@@ -148,3 +148,5 @@ REST_FRAMEWORK = {
 
 # Custom user model (if you're using one)
 # AUTH_USER_MODEL = 'authentication.CustomUser' 
+
+SESSION_COOKIE_AGE = 7200 
