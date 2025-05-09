@@ -654,44 +654,54 @@ export default {
           params.append("yardim_tipi", selectedYardimTipi.value);
         }
 
-        // Tüm şahsi yardımları tek seferde al
-        const [dosyalarResponse, yardimlarResponse] = await Promise.all([
-          apiService.get(`/dosyalar/?${params.toString()}`),
-          apiService.getSahsiYardimlar(),
-        ]);
-
-        const yardimlar =
-          yardimlarResponse.data.results || yardimlarResponse.data;
+        const response = await apiService.get(
+          `/dosyalar/?${params.toString()}`
+        );
 
         // Backend'den gelen verileri işle
-        dosyalar.value = dosyalarResponse.data.results
-          .map((dosya) => {
-            const dosyaYardimlari = yardimlar.filter((yardim) => {
-              if (!yardim.dosyalar) return false;
-              return yardim.dosyalar.some((d) => d.id === dosya.id);
-            });
+        dosyalar.value = await Promise.all(
+          response.data.results.map(async (dosya) => {
+            try {
+              const yardimResponse = await apiService.getSahsiYardimlar();
+              const yardimlar =
+                yardimResponse.data.results || yardimResponse.data;
 
-            let yardimTipi = null;
-            if (dosyaYardimlari.length > 0) {
-              yardimTipi = dosyaYardimlari[0].yardim_tipi;
+              const dosyaYardimlari = yardimlar.filter((yardim) => {
+                if (!yardim.dosyalar) return false;
+                return yardim.dosyalar.some((d) => d.id === dosya.id);
+              });
+
+              let yardimTipi = null;
+              if (dosyaYardimlari.length > 0) {
+                yardimTipi = dosyaYardimlari[0].yardim_tipi;
+              }
+
+              if (
+                selectedYardimTipi.value &&
+                yardimTipi !== selectedYardimTipi.value
+              ) {
+                return null;
+              }
+
+              return {
+                ...dosya,
+                yardim_tipi: yardimTipi,
+              };
+            } catch (error) {
+              console.error("Yardım detayları alınırken hata:", error);
+              return {
+                ...dosya,
+                yardim_tipi: null,
+              };
             }
-
-            if (
-              selectedYardimTipi.value &&
-              yardimTipi !== selectedYardimTipi.value
-            ) {
-              return null;
-            }
-
-            return {
-              ...dosya,
-              yardim_tipi: yardimTipi,
-            };
           })
-          .filter((dosya) => dosya !== null);
+        );
+
+        // null olan dosyaları filtrele
+        dosyalar.value = dosyalar.value.filter((dosya) => dosya !== null);
 
         // Backend'den gelen toplam kayıt sayısını kullan
-        totalItems.value = dosyalarResponse.data.count || 0;
+        totalItems.value = response.data.count || 0;
       } catch (error) {
         console.error("Dosyalar yüklenirken hata:", error);
         dosyalar.value = [];
@@ -916,16 +926,11 @@ export default {
         params.append("page", 1);
         params.append("page_size", 100); // Her sayfada 100 kayıt al
 
-        // Tüm şahsi yardımları tek seferde al
-        const [firstResponse, yardimlarResponse] = await Promise.all([
-          apiService.get(`/dosyalar/?${params.toString()}`),
-          apiService.getSahsiYardimlar(),
-        ]);
-
+        const firstResponse = await apiService.get(
+          `/dosyalar/?${params.toString()}`
+        );
         const totalCount = firstResponse.data.count;
         const totalPages = Math.ceil(totalCount / 100);
-        const yardimlar =
-          yardimlarResponse.data.results || yardimlarResponse.data;
 
         console.log(`Toplam kayıt sayısı: ${totalCount}`);
         console.log(`Toplam sayfa sayısı: ${totalPages}`);
@@ -965,36 +970,57 @@ export default {
 
         // Kayıtları ekle
         for (const dosya of allDosyalar) {
-          const dosyaYardimlari = yardimlar.filter((yardim) => {
-            if (!yardim.dosyalar) return false;
-            return yardim.dosyalar.some((d) => d.id === dosya.id);
-          });
+          try {
+            // Her dosya için yardım tipini kontrol et
+            const yardimResponse = await apiService.getSahsiYardimlar();
+            const yardimlar =
+              yardimResponse.data.results || yardimResponse.data;
 
-          let yardimTipi = null;
-          if (dosyaYardimlari.length > 0) {
-            yardimTipi = dosyaYardimlari[0].yardim_tipi;
+            const dosyaYardimlari = yardimlar.filter((yardim) => {
+              if (!yardim.dosyalar) return false;
+              return yardim.dosyalar.some((d) => d.id === dosya.id);
+            });
+
+            let yardimTipi = null;
+            if (dosyaYardimlari.length > 0) {
+              yardimTipi = dosyaYardimlari[0].yardim_tipi;
+            }
+
+            // Yardım tipi filtresini uygula
+            if (
+              selectedYardimTipi.value &&
+              yardimTipi !== selectedYardimTipi.value
+            ) {
+              continue; // Bu kaydı atla
+            }
+
+            // Kaydı Excel'e ekle
+            data.push([
+              dosya.dosya_no,
+              `${dosya.ad} ${dosya.soyad}`,
+              dosya.kimlik_no,
+              dosya.telefon,
+              formatAddress(dosya),
+              dosya.durum,
+              getEngelDurumuText(dosya),
+              getYardimTipiText({ yardim_tipi: yardimTipi }),
+              formatDate(dosya.kayit_tarihi),
+            ]);
+          } catch (error) {
+            console.error("Yardım detayları alınırken hata:", error);
+            // Hata durumunda da kaydı ekle
+            data.push([
+              dosya.dosya_no,
+              `${dosya.ad} ${dosya.soyad}`,
+              dosya.kimlik_no,
+              dosya.telefon,
+              formatAddress(dosya),
+              dosya.durum,
+              getEngelDurumuText(dosya),
+              "-",
+              formatDate(dosya.kayit_tarihi),
+            ]);
           }
-
-          // Yardım tipi filtresini uygula
-          if (
-            selectedYardimTipi.value &&
-            yardimTipi !== selectedYardimTipi.value
-          ) {
-            continue; // Bu kaydı atla
-          }
-
-          // Kaydı Excel'e ekle
-          data.push([
-            dosya.dosya_no,
-            `${dosya.ad} ${dosya.soyad}`,
-            dosya.kimlik_no,
-            dosya.telefon,
-            formatAddress(dosya),
-            dosya.durum,
-            getEngelDurumuText(dosya),
-            getYardimTipiText({ yardim_tipi: yardimTipi }),
-            formatDate(dosya.kayit_tarihi),
-          ]);
         }
 
         // Excel dosyası oluştur
