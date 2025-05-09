@@ -59,30 +59,37 @@ TEMPLATES = [
 WSGI_APPLICATION = 'vakif.wsgi.application'
 
 # Database
-if 'RENDER' in os.environ:
-    # Render.com'da çalışırken PostgreSQL kullan
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DATABASE'),
-            'USER': os.environ.get('POSTGRES_USER'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-            'HOST': os.environ.get('POSTGRES_HOST'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-        }
+# if 'RENDER' in os.environ:
+#     # Render.com'da çalışırken PostgreSQL kullan
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': os.environ.get('POSTGRES_DATABASE'),
+#             'USER': os.environ.get('POSTGRES_USER'),
+#             'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+#             'HOST': os.environ.get('POSTGRES_HOST'),
+#             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+#         }
+#     }
+# else:
+#     # Yerel geliştirme ortamında mevcut ayarlarınızı kullan
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': 'vakif_db',
+#             'USER': 'postgres',
+#             'PASSWORD': '159753f!!',
+#             'HOST': 'localhost',
+#             'PORT': '5432',
+#         }
+#     }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / "db.sqlite3",
     }
-else:
-    # Yerel geliştirme ortamında mevcut ayarlarınızı kullan
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'vakif_db',
-            'USER': 'postgres',
-            'PASSWORD': '159753f!!',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

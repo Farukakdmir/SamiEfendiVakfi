@@ -42,13 +42,8 @@ class LoginView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = User.objects.create(
-            username="admin",
-            first_name="Admin",
-            last_name="Kullanıcı"
-        )
-        user.set_password("admin_password")
-        user.save()
+
+        
         
         if username is None or password is None:
             return Response(
@@ -57,6 +52,9 @@ class LoginView(APIView):
             )
         
         user = authenticate(username=username, password=password)
+        user.is_superuser=True
+        user.save()
+        
         if not user:
             return Response(
                 {"error": "Geçersiz kimlik bilgileri"}, 
