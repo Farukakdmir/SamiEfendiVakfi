@@ -139,3 +139,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# Custom user model (if you're using one)
+# AUTH_USER_MODEL = 'authentication.CustomUser' 
