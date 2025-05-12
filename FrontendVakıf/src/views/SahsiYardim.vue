@@ -139,7 +139,7 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="record in filteredRecords" :key="record.id">
+              <tr v-for="record in displayedYardimlar" :key="record.id">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">
                     {{ record.ad_soyad }}
@@ -447,6 +447,7 @@ export default {
     const selectedYardim = ref(null);
     const selectedYardimTipi = ref("");
     const showFilters = ref(false);
+    const displayedYardimlar = ref([]);
 
     // Sayfalama için state
     const currentPage = ref(1);
@@ -458,6 +459,26 @@ export default {
 
     const clearSearch = () => {
       searchQuery.value = "";
+    };
+
+    // Yardımları getir
+    const fetchYardimlar = async () => {
+      try {
+        const response = await apiService.getSahsiYardimlar();
+        yardimlar.value = response.data;
+        totalItems.value = response.data.length;
+        updateDisplayedRecords();
+      } catch (error) {
+        console.error("Yardımlar yüklenirken hata:", error);
+      }
+    };
+
+    // Görüntülenecek kayıtları güncelle
+    const updateDisplayedRecords = () => {
+      const filtered = filteredRecords.value;
+      const startIndex = (currentPage.value - 1) * pageSize.value;
+      const endIndex = startIndex + pageSize.value;
+      displayedYardimlar.value = filtered.slice(startIndex, endIndex);
     };
 
     const filteredRecords = computed(() => {
@@ -483,34 +504,21 @@ export default {
       return filtered;
     });
 
-    // Yardımları getir
-    const fetchYardimlar = async () => {
-      try {
-        const params = new URLSearchParams();
-        params.append("page", currentPage.value);
-        params.append("page_size", pageSize.value);
-
-        if (selectedYardimTipi.value) {
-          params.append("yardim_tipi", selectedYardimTipi.value);
-        }
-
-        const response = await apiService.getSahsiYardimlar(params);
-        yardimlar.value = response.data.results || response.data;
-        totalItems.value = response.data.count || response.data.length;
-      } catch (error) {
-        console.error("Yardımlar yüklenirken hata:", error);
-      }
-    };
-
-    // Yardım tipi değiştiğinde verileri yeniden yükle
-    watch(selectedYardimTipi, () => {
-      currentPage.value = 1;
-      fetchYardimlar();
+    // Sayfa değiştiğinde görüntülenecek kayıtları güncelle
+    watch([currentPage, filteredRecords], () => {
+      updateDisplayedRecords();
     });
 
-    // Sayfa değiştiğinde verileri yeniden yükle
-    watch(currentPage, () => {
-      fetchYardimlar();
+    // Yardım tipi değiştiğinde sayfayı sıfırla
+    watch(selectedYardimTipi, () => {
+      currentPage.value = 1;
+      updateDisplayedRecords();
+    });
+
+    // Arama yapıldığında sayfayı sıfırla
+    watch(searchQuery, () => {
+      currentPage.value = 1;
+      updateDisplayedRecords();
     });
 
     // Yeni yardım kaydet
@@ -631,6 +639,7 @@ export default {
       showFilters,
       clearFilters,
       displayedPages,
+      displayedYardimlar,
     };
   },
 };

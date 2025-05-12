@@ -1,349 +1,340 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
-    <div
-      class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0"
-    >
-      <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-      </div>
+  <v-dialog
+    v-model="dialog"
+    max-width="1200px"
+    transition="dialog-bottom-transition"
+  >
+    <v-card class="rounded-lg">
+      <v-card-title class="text-h5 bg-emerald-800 text-white pa-4">
+        <v-icon start icon="mdi-plus" class="mr-2"></v-icon>
+        Maddi Yardım Ekle
+      </v-card-title>
 
-      <div
-        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full"
-      >
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Maddi Yardım Ekle
-              </h3>
+      <v-card-text class="pa-6">
+        <v-form ref="form" v-model="valid">
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="form.yardim_yapan_ad_soyad"
+                label="Yardım Yapan Ad Soyad"
+                :rules="[(v) => !!v || 'Ad Soyad zorunludur']"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-account"
+                required
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="form.yardim_yapan_telefon"
+                label="Yardım Yapan Telefon"
+                :rules="[(v) => !!v || 'Telefon zorunludur']"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-phone"
+                required
+              ></v-text-field>
+            </v-col>
+          </v-row>
 
-              <form @submit.prevent="handleSubmit" class="space-y-4">
-                <!-- Yardım Yapan Bilgileri -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                      >Yardım Yapan Ad Soyad</label
-                    >
-                    <input
-                      v-model="form.yardim_yapan_ad_soyad"
-                      type="text"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+          <!-- Dosya Listesi -->
+          <v-card class="mb-4 rounded-lg" elevation="1">
+            <v-card-title class="bg-grey-lighten-4">
+              <v-icon start icon="mdi-file-document" class="mr-2"></v-icon>
+              Dosya Tutarları
+              <v-spacer></v-spacer>
+              <v-btn
+                color="primary"
+                variant="text"
+                @click="showManualEntry = !showManualEntry"
+                class="ml-2"
+              >
+                <v-icon start icon="mdi-plus"></v-icon>
+                Manuel Kayıt Ekle
+              </v-btn>
+            </v-card-title>
+
+            <!-- Manuel Kayıt Formu -->
+            <v-expand-transition>
+              <div v-if="showManualEntry" class="pa-4 bg-grey-lighten-4">
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="manualEntry.ad_soyad"
+                      label="Ad Soyad"
+                      variant="outlined"
+                      density="comfortable"
                       required
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                      >Yardım Yapan Telefon</label
-                    >
-                    <input
-                      v-model="form.yardim_yapan_telefon"
-                      type="tel"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="manualEntry.tc_kimlik"
+                      label="TC Kimlik No"
+                      variant="outlined"
+                      density="comfortable"
                       required
-                    />
-                  </div>
-                </div>
-
-                <!-- Aile Seçimi -->
-                <div class="mt-4">
-                  <div class="flex items-center justify-between mb-2">
-                    <h4 class="text-sm font-medium text-gray-700">
-                      Yardım Alacak Aileler
-                    </h4>
-                    <div class="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        @click="showManualEntry = !showManualEntry"
-                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                      >
-                        <svg
-                          class="h-4 w-4 mr-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Manuel Kayıt
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Manuel Kayıt Formu -->
-                  <div
-                    v-if="showManualEntry"
-                    class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >Ad Soyad</label
-                        >
-                        <input
-                          v-model="manualEntry.ad_soyad"
-                          type="text"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >TC Kimlik No</label
-                        >
-                        <input
-                          v-model="manualEntry.tc_kimlik"
-                          type="text"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >Telefon</label
-                        >
-                        <input
-                          v-model="manualEntry.telefon"
-                          type="tel"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >Adres</label
-                        >
-                        <input
-                          v-model="manualEntry.adres"
-                          type="text"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >Tutar</label
-                        >
-                        <input
-                          v-model="manualEntry.tutar"
-                          type="number"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                          >Açıklama</label
-                        >
-                        <input
-                          v-model="manualEntry.aciklama"
-                          type="text"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                        />
-                      </div>
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                      <button
-                        type="button"
-                        @click="addManualEntry"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                      >
-                        Ekle
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Arama Kutusu -->
-                  <div class="relative">
-                    <input
-                      v-model="searchQuery"
-                      type="text"
-                      placeholder="Dosya no, ad veya soyad ile arayın..."
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                      @input="searchAileler"
-                    />
-                    <!-- Arama Sonuçları -->
-                    <div
-                      v-if="searchResults.length > 0 && showResults"
-                      class="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto"
-                    >
-                      <div
-                        v-for="dosya in filteredSearchResults"
-                        :key="dosya.id"
-                        class="p-2 hover:bg-gray-100 cursor-pointer"
-                        @click="selectAile(dosya)"
-                      >
-                        <div class="font-medium">
-                          {{ dosya.ad }} {{ dosya.soyad }}
-                        </div>
-                        <div class="text-sm text-gray-600">
-                          Dosya No: {{ dosya.dosya_no }} - Tel:
-                          {{ dosya.telefon }}
-                        </div>
-                        <div class="text-sm text-gray-500">
-                          {{ dosya.mahalle }} Mah. {{ dosya.cadde_sokak }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Seçili Aileler -->
-                  <div
-                    v-if="form.dosyalar && form.dosyalar.length > 0"
-                    class="mt-4"
-                  >
-                    <h4 class="text-sm font-medium text-gray-700 mb-2">
-                      Seçili Aileler
-                    </h4>
-                    <div class="space-y-2">
-                      <div
-                        v-for="aile in form.dosyalar"
-                        :key="aile.id"
-                        class="flex items-center justify-between p-2 bg-gray-50 rounded-md"
-                      >
-                        <div class="flex items-center space-x-4">
-                          <div class="flex-shrink-0">
-                            <div class="font-medium">
-                              {{ aile.ad_soyad || `${aile.ad} ${aile.soyad}` }}
-                            </div>
-                            <div class="text-sm text-gray-500">
-                              {{
-                                aile.dosya_no
-                                  ? `Dosya No: ${aile.dosya_no}`
-                                  : "Manuel Kayıt"
-                              }}
-                            </div>
-                          </div>
-                          <div class="flex items-center space-x-2">
-                            <span
-                              :class="[
-                                'px-2 py-1 rounded-full text-xs font-medium',
-                                getStatusClass(aile.durum || 'manuel'),
-                              ]"
-                            >
-                              {{ aile.durum || "Manuel Kayıt" }}
-                            </span>
-                          </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                          <div class="flex items-center space-x-2">
-                            <label class="text-sm text-gray-700">Tutar:</label>
-                            <input
-                              v-model="aile.tutar"
-                              type="number"
-                              class="w-24 rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                              placeholder="0"
-                            />
-                          </div>
-                          <button
-                            v-if="aile.dosya_no"
-                            type="button"
-                            @click="openDosyaDetay(aile)"
-                            class="text-blue-600 hover:text-blue-800"
-                          >
-                            {{ aile.dosya_no }}
-                          </button>
-                          <button
-                            type="button"
-                            class="text-red-600 hover:text-red-800"
-                            @click="removeAile(aile)"
-                          >
-                            Kaldır
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Toplam Tutar -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                      >Yardım Tutarı</label
-                    >
-                    <input
-                      v-model="form.yardim_tutar"
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="manualEntry.telefon"
+                      label="Telefon"
+                      variant="outlined"
+                      density="comfortable"
+                      required
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="manualEntry.adres"
+                      label="Adres"
+                      variant="outlined"
+                      density="comfortable"
+                      required
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model.number="manualEntry.tutar"
+                      label="Tutar"
                       type="number"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      variant="outlined"
+                      density="comfortable"
                       required
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700"
-                      >Toplam Tutar</label
-                    >
-                    <input
-                      v-model="form.tutar"
-                      type="number"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 bg-gray-50"
-                      readonly
-                    />
-                  </div>
-                </div>
-
-                <!-- Açıklama -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700"
-                    >Açıklama</label
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model="manualEntry.aciklama"
+                      label="Açıklama"
+                      variant="outlined"
+                      density="comfortable"
+                    ></v-text-field>
+                  </v-col>
+                </v-row>
+                <div class="d-flex justify-end">
+                  <v-btn
+                    color="primary"
+                    @click="addManualEntry"
+                    :disabled="
+                      !manualEntry.ad_soyad ||
+                      !manualEntry.tc_kimlik ||
+                      !manualEntry.telefon ||
+                      !manualEntry.adres
+                    "
                   >
-                  <textarea
-                    v-model="form.aciklama"
-                    rows="3"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                    placeholder="Yardım hakkında açıklama ekleyin..."
-                  ></textarea>
+                    Ekle
+                  </v-btn>
                 </div>
-              </form>
-            </div>
-          </div>
-        </div>
+              </div>
+            </v-expand-transition>
 
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            type="button"
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
-            @click="handleSubmit"
-            :disabled="loading"
-          >
-            <svg
-              v-if="loading"
-              class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            {{ loading ? "Kaydediliyor..." : "Kaydet" }}
-          </button>
-          <button
-            type="button"
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-            @click="handleClose"
-          >
-            İptal
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+            <!-- Dosya Arama -->
+            <v-card-text class="pa-4">
+              <v-text-field
+                v-model="searchQuery"
+                label="Dosya no, ad veya soyad ile arayın..."
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                density="comfortable"
+                @input="searchAileler"
+                class="mb-4"
+              ></v-text-field>
+
+              <!-- Arama Sonuçları -->
+              <v-expand-transition>
+                <div
+                  v-if="searchResults.length > 0 && showResults"
+                  class="mb-4"
+                >
+                  <v-list>
+                    <v-list-item
+                      v-for="dosya in filteredSearchResults"
+                      :key="dosya.id"
+                      @click="selectAile(dosya)"
+                      class="cursor-pointer"
+                    >
+                      <v-list-item-title>
+                        {{ dosya.ad }} {{ dosya.soyad }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle>
+                        Dosya No: {{ dosya.dosya_no }} - Tel:
+                        {{ dosya.telefon }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </div>
+              </v-expand-transition>
+            </v-card-text>
+
+            <v-card-text class="pa-0">
+              <v-table density="comfortable" hover class="modern-table">
+                <thead>
+                  <tr>
+                    <th class="text-left">Dosya No</th>
+                    <th class="text-left">Ad Soyad</th>
+                    <th class="text-left">Telefon</th>
+                    <th class="text-left">Adres</th>
+                    <th class="text-right">Tutar</th>
+                    <th class="text-center">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="dosya in dosyalar"
+                    :key="dosya.id"
+                    class="hover-row"
+                  >
+                    <td>{{ dosya.dosya_no }}</td>
+                    <td>{{ dosya.ad }} {{ dosya.soyad }}</td>
+                    <td>{{ dosya.telefon }}</td>
+                    <td>{{ dosya.mahalle }} {{ dosya.cadde_sokak }}</td>
+                    <td class="text-right">
+                      <v-text-field
+                        v-model.number="dosyaTutarlari[dosya.id]"
+                        type="number"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        class="tutar-input"
+                        @input="updateTotalTutar"
+                      ></v-text-field>
+                    </td>
+                    <td class="text-center">
+                      <v-btn
+                        color="primary"
+                        size="small"
+                        variant="text"
+                        @click="openDosyaDetay(dosya)"
+                      >
+                        <v-icon icon="mdi-eye"></v-icon>
+                        Detay
+                      </v-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-card-text>
+          </v-card>
+
+          <!-- Manuel Kayıtlar -->
+          <v-card class="mb-4 rounded-lg" elevation="1">
+            <v-card-title class="bg-grey-lighten-4">
+              <v-icon start icon="mdi-account-multiple" class="mr-2"></v-icon>
+              Manuel Kayıtlar
+            </v-card-title>
+            <v-card-text class="pa-0">
+              <v-table density="comfortable" hover class="modern-table">
+                <thead>
+                  <tr>
+                    <th class="text-left">Ad Soyad</th>
+                    <th class="text-left">TC Kimlik</th>
+                    <th class="text-left">Telefon</th>
+                    <th class="text-left">Adres</th>
+                    <th class="text-right">Tutar</th>
+                    <th class="text-left">Açıklama</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(kayit, index) in manuelKayitlar"
+                    :key="index"
+                    class="hover-row"
+                  >
+                    <td>{{ kayit.ad_soyad }}</td>
+                    <td>{{ kayit.tc_kimlik }}</td>
+                    <td>{{ kayit.telefon }}</td>
+                    <td>{{ kayit.adres }}</td>
+                    <td class="text-right">
+                      <v-text-field
+                        v-model.number="kayit.tutar"
+                        type="number"
+                        density="compact"
+                        variant="outlined"
+                        hide-details
+                        class="tutar-input"
+                        @input="updateTotalTutar"
+                      ></v-text-field>
+                    </td>
+                    <td>{{ kayit.aciklama }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-card-text>
+          </v-card>
+
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="form.yardim_tutar"
+                label="Yardım Tutarı"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-currency-try"
+                required
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="form.tutar"
+                label="Toplam Tutar"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-currency-try"
+                readonly
+                :model-value="toplamTutar"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="12">
+              <v-textarea
+                v-model="form.aciklama"
+                label="Açıklama"
+                rows="3"
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-text"
+              ></v-textarea>
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="12" class="text-right">
+              <v-card class="pa-4 bg-grey-lighten-4 rounded-lg" elevation="0">
+                <div class="text-h6 font-weight-bold">
+                  Toplam Tutar: {{ toplamTutar.toLocaleString("tr-TR") }} TL
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-form>
+      </v-card-text>
+
+      <v-card-actions class="pa-4 bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          color="error"
+          variant="outlined"
+          @click="dialog = false"
+          class="mr-2"
+        >
+          <v-icon start icon="mdi-close"></v-icon>
+          İptal
+        </v-btn>
+        <v-btn
+          color="primary"
+          :loading="loading"
+          :disabled="!valid || loading"
+          @click="handleSubmit"
+        >
+          <v-icon start icon="mdi-content-save"></v-icon>
+          {{ loading ? "Kaydediliyor..." : "Kaydet" }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -361,17 +352,15 @@ export default {
   },
   emits: ["close", "saved"],
   setup(props, { emit }) {
+    const dialog = ref(props.show);
+    const valid = ref(false);
     const loading = ref(false);
-    const formErrors = ref({});
     const form = ref({
       yardim_yapan_ad_soyad: "",
       yardim_yapan_telefon: "",
       yardim_tutar: 0,
       tutar: 0,
       aciklama: "",
-      dosyalar: [],
-      dosya_tutarlari_list: [],
-      manuel_kayitlar_list: [],
     });
 
     const searchQuery = ref("");
@@ -389,6 +378,11 @@ export default {
     });
 
     const router = useRouter();
+
+    const dosyalar = ref([]);
+    const dosyaTutarlari = ref({});
+    const manuelKayitlar = ref([]);
+    const toplamTutar = ref(0);
 
     // Manuel kayıt ekleme
     const addManualEntry = () => {
@@ -412,7 +406,7 @@ export default {
         durum: "manuel",
       };
 
-      form.value.dosyalar.push(newEntry);
+      manuelKayitlar.value.push(newEntry);
       updateTotalTutar();
 
       // Manuel giriş formunu temizle
@@ -425,22 +419,6 @@ export default {
         aciklama: "",
       };
       showManualEntry.value = false;
-    };
-
-    // Status class helper function
-    const getStatusClass = (status) => {
-      switch (status) {
-        case "aktif":
-          return "bg-green-100 text-green-800";
-        case "pasif":
-          return "bg-red-100 text-red-800";
-        case "beklemede":
-          return "bg-yellow-100 text-yellow-800";
-        case "manuel":
-          return "bg-blue-100 text-blue-800";
-        default:
-          return "bg-gray-100 text-gray-800";
-      }
     };
 
     // Arama fonksiyonu
@@ -456,7 +434,7 @@ export default {
         searchResults.value = response.data.results || response.data;
         filteredSearchResults.value = searchResults.value.filter(
           (dosya) =>
-            !form.value.dosyalar.some((selected) => selected.id === dosya.id)
+            !dosyalar.value.some((selected) => selected.id === dosya.id)
         );
         showResults.value = true;
       } catch (error) {
@@ -468,11 +446,12 @@ export default {
 
     // Aile seçme fonksiyonu
     const selectAile = (dosya) => {
-      if (!form.value.dosyalar.some((selected) => selected.id === dosya.id)) {
-        form.value.dosyalar.push({
+      if (!dosyalar.value.some((selected) => selected.id === dosya.id)) {
+        dosyalar.value.push({
           ...dosya,
           tutar: 0,
         });
+        dosyaTutarlari.value[dosya.id] = 0;
         updateTotalTutar();
       }
       searchQuery.value = "";
@@ -481,187 +460,235 @@ export default {
 
     // Aile kaldırma fonksiyonu
     const removeAile = (dosya) => {
-      const index = form.value.dosyalar.findIndex((a) => a.id === dosya.id);
+      const index = dosyalar.value.findIndex((a) => a.id === dosya.id);
       if (index !== -1) {
-        form.value.dosyalar.splice(index, 1);
+        dosyalar.value.splice(index, 1);
+        delete dosyaTutarlari.value[dosya.id];
+        updateTotalTutar();
+      }
+    };
+
+    // Manuel kayıt kaldırma fonksiyonu
+    const removeManuelKayit = (kayit) => {
+      const index = manuelKayitlar.value.findIndex((k) => k.id === kayit.id);
+      if (index !== -1) {
+        manuelKayitlar.value.splice(index, 1);
         updateTotalTutar();
       }
     };
 
     // Toplam tutarı güncelle
     const updateTotalTutar = () => {
-      const toplamTutar = form.value.dosyalar.reduce(
-        (total, dosya) => total + (Number(dosya.tutar) || 0),
-        0
-      );
-      form.value.tutar = toplamTutar;
+      let total = 0;
+
+      // Dosya tutarlarını topla
+      Object.values(dosyaTutarlari.value).forEach((tutar) => {
+        total += Number(tutar);
+      });
+
+      // Manuel kayıt tutarlarını topla
+      manuelKayitlar.value.forEach((kayit) => {
+        total += Number(kayit.tutar);
+      });
+
+      toplamTutar.value = total;
+      form.value.tutar = total;
     };
 
-    // Tutar değişikliğini izle
-    watch(
-      () => form.value.dosyalar,
-      () => {
-        updateTotalTutar();
-      },
-      { deep: true }
-    );
-
-    // Dosya detayını göster
-    const openDosyaDetay = (dosya) => {
-      if (dosya.dosya_no) {
-        router.push(`/dosya/${dosya.dosya_no}`);
-      }
-    };
-
-    const resetForm = () => {
-      form.value = {
-        yardim_yapan_ad_soyad: "",
-        yardim_yapan_telefon: "",
-        yardim_tutar: 0,
-        dosyalar: [],
-        dosya_tutarlari_list: [],
-        manuel_kayitlar_list: [],
-        aciklama: "",
-      };
-      searchQuery.value = "";
-      searchResults.value = [];
-      showManualEntry.value = false;
-      manualEntry.value = {
-        ad_soyad: "",
-        tc_kimlik: "",
-        telefon: "",
-        adres: "",
-        tutar: "",
-        aciklama: "",
-      };
-    };
-
+    // Kaydet butonuna tıklandığında
     const handleSubmit = async () => {
       try {
         loading.value = true;
-        formErrors.value = {};
 
-        // Form validasyonu
-        if (!form.value.yardim_yapan_ad_soyad) {
-          formErrors.value.yardim_yapan_ad_soyad =
-            "Yardım yapan kişinin adı soyadı zorunludur";
-        }
-        if (!form.value.yardim_yapan_telefon) {
-          formErrors.value.yardim_yapan_telefon =
-            "Yardım yapan kişinin telefonu zorunludur";
-        }
-        if (form.value.dosyalar.length === 0) {
-          formErrors.value.dosyalar =
-            "En az bir dosya veya manuel kayıt seçilmelidir";
-        }
+        // Dosya tutarlarını hazırla
+        const dosyaTutarlariList = Object.entries(dosyaTutarlari.value).map(
+          ([dosyaId, tutar]) => ({
+            dosya: Number(dosyaId),
+            tutar: Number(tutar),
+          })
+        );
 
-        if (Object.keys(formErrors.value).length > 0) {
-          return;
-        }
+        // Manuel kayıtları hazırla
+        const manuelKayitlarList = manuelKayitlar.value.map((kayit) => ({
+          ad_soyad: kayit.ad_soyad,
+          tc_kimlik: kayit.tc_kimlik,
+          telefon: kayit.telefon,
+          adres: kayit.adres,
+          tutar: Number(kayit.tutar),
+          aciklama: kayit.aciklama,
+        }));
 
-        // Dosya tutarlarını ve manuel kayıtları ayır
-        const dosyaTutarlari = form.value.dosyalar
-          .filter((dosya) => !dosya.id.toString().startsWith("manual_"))
-          .map((dosya) => ({
-            dosya: dosya.id,
-            tutar: Number(dosya.tutar) || 0,
-          }));
-
-        const manuelKayitlar = form.value.dosyalar
-          .filter((dosya) => dosya.id.toString().startsWith("manual_"))
-          .map((dosya) => ({
-            ad_soyad: dosya.ad_soyad,
-            tc_kimlik: dosya.tc_kimlik,
-            telefon: dosya.telefon,
-            adres: dosya.adres,
-            tutar: Number(dosya.tutar) || 0,
-            aciklama: dosya.aciklama || "",
-          }));
-
-        const submitData = {
+        // Form verilerini hazırla
+        const formData = {
           yardim_yapan_ad_soyad: form.value.yardim_yapan_ad_soyad,
           yardim_yapan_telefon: form.value.yardim_yapan_telefon,
           yardim_tutar: Number(form.value.yardim_tutar),
-          tutar: form.value.tutar,
-          aciklama: form.value.aciklama,
-          dosya_tutarlari_list: dosyaTutarlari,
-          manuel_kayitlar_list: manuelKayitlar,
+          tutar: toplamTutar.value,
+          aciklama: form.value.aciklama || "",
+          dosya_tutarlari_list: dosyaTutarlariList,
+          manuel_kayitlar_list: manuelKayitlarList,
         };
 
-        const response = await apiService.createMaddiYardim(submitData);
-        if (response.data) {
-          emit("saved");
-          emit("close");
-          resetForm();
-        }
+        // API'ye gönder
+        const response = await apiService.createMaddiYardim(formData);
+
+        // Başarılı mesajı göster
+        alert("Maddi yardım başarıyla kaydedildi");
+
+        // Modalı kapat ve güncel veriyi gönder
+        dialog.value = false;
+        emit("saved", response.data);
       } catch (error) {
-        console.error("Maddi yardım kaydedilirken hata:", error);
-        if (error.response?.data) {
-          formErrors.value = error.response.data;
-        }
+        console.error("Kaydetme hatası:", error);
+        alert("Kaydetme sırasında bir hata oluştu");
       } finally {
         loading.value = false;
       }
     };
 
-    // Modal kapandığında formu sıfırla
-    const handleClose = () => {
-      resetForm();
-      emit("close");
+    // Modal açıldığında
+    watch(
+      () => props.show,
+      (newVal) => {
+        dialog.value = newVal;
+      }
+    );
+
+    // Modal kapatıldığında form verilerini sıfırla
+    watch(dialog, (newVal) => {
+      if (!newVal) {
+        emit("close");
+        // Form verilerini sıfırla
+        form.value = {
+          yardim_yapan_ad_soyad: "",
+          yardim_yapan_telefon: "",
+          yardim_tutar: 0,
+          tutar: 0,
+          aciklama: "",
+        };
+        dosyalar.value = [];
+        dosyaTutarlari.value = {};
+        manuelKayitlar.value = [];
+        toplamTutar.value = 0;
+        searchQuery.value = "";
+        searchResults.value = [];
+        showResults.value = false;
+        showManualEntry.value = false;
+        manualEntry.value = {
+          ad_soyad: "",
+          tc_kimlik: "",
+          telefon: "",
+          adres: "",
+          tutar: 0,
+          aciklama: "",
+        };
+      }
+    });
+
+    // Dosya detayını göster
+    const openDosyaDetay = (dosya) => {
+      router.push(`/dosya/${dosya.dosya_no}`);
     };
 
-    // Dışarı tıklandığında arama sonuçlarını kapat
-    const handleClickOutside = (event) => {
-      const searchContainer = document.querySelector(".relative");
-      if (searchContainer && !searchContainer.contains(event.target)) {
-        showResults.value = false;
+    // Status class helper function
+    const getStatusClass = (status) => {
+      switch (status) {
+        case "aktif":
+          return "bg-green-100 text-green-800";
+        case "pasif":
+          return "bg-red-100 text-red-800";
+        case "beklemede":
+          return "bg-yellow-100 text-yellow-800";
+        default:
+          return "bg-gray-100 text-gray-800";
       }
     };
 
-    onMounted(() => {
-      document.addEventListener("click", handleClickOutside);
-    });
-
-    onUnmounted(() => {
-      document.removeEventListener("click", handleClickOutside);
-    });
-
     return {
+      dialog,
+      valid,
+      loading,
       form,
+      dosyalar,
+      dosyaTutarlari,
+      manuelKayitlar,
+      toplamTutar,
       searchQuery,
       searchResults,
       showResults,
       filteredSearchResults,
       showManualEntry,
       manualEntry,
-      loading,
-      formErrors,
+      updateTotalTutar,
+      handleSubmit,
+      openDosyaDetay,
+      getStatusClass,
       searchAileler,
       selectAile,
       removeAile,
-      updateTotalTutar,
-      openDosyaDetay,
-      handleSubmit,
-      getStatusClass,
       addManualEntry,
-      handleClose,
-      resetForm,
+      removeManuelKayit,
     };
   },
 };
 </script>
 
 <style scoped>
-.animate-spin {
-  animation: spin 1s linear infinite;
+.hover-row:hover {
+  background-color: transparent !important;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.tutar-input {
+  max-width: 150px;
+  margin: 0 auto;
+}
+
+.v-card-title {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.modern-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-table .v-table__wrapper > table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th {
+  background-color: transparent !important;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th,
+.modern-table .v-table__wrapper > table > tbody > tr > td {
+  border: none !important;
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th {
+  background-color: transparent !important;
+}
+
+.modern-table .v-table__wrapper > table > tbody > tr > td {
+  background-color: transparent !important;
+}
+
+/* Hover efektini tamamen kaldır */
+.modern-table .v-table__wrapper > table > tbody > tr:hover > td,
+.modern-table .v-table__wrapper > table > tbody > tr:hover {
+  background-color: transparent !important;
+}
+
+.v-table--hover
+  > .v-table__wrapper
+  > table
+  > tbody
+  > tr:hover:not(.v-data-table__expanded__content):not(
+    .v-data-table__empty-wrapper
+  ) {
+  background-color: transparent !important;
 }
 </style>

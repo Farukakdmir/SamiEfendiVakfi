@@ -4,24 +4,9 @@ from django.db import transaction
 
 
 class AileBilgisiSerializer(serializers.ModelSerializer):
-    yakinlik_adi = serializers.CharField(source='get_yakinlik_display', read_only=True)
-    cinsiyet_adi = serializers.CharField(source='get_cinsiyet_display', read_only=True)
-
     class Meta:
         model = AileBilgisi
-        fields = [
-            'id', 'dosya', 'ad', 'soyad', 'kimlik_no', 'yakinlik',
-            'yakinlik_adi', 'cinsiyet', 'cinsiyet_adi', 'dogum_tarihi',
-            'engel_durumu', 'engel_aciklama'
-        ]
-        extra_kwargs = {
-            'dosya': {'required': False, 'write_only': True}
-        }
-    
-    def validate(self, data):
-        if not data.get('dosya') and not self.context.get('dosya'):
-            raise serializers.ValidationError({"dosya": "Bu alan zorunludur."})
-        return data
+        fields = '__all__'
 
 
 class BelgeSerializer(serializers.ModelSerializer):
@@ -122,8 +107,7 @@ class DosyaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dosya
         fields = [
-            'id',
-            'dosya_no', 'kayit_tarihi', 'ad', 'soyad', 'kimlik_no', 
+            'id', 'dosya_no', 'kayit_tarihi', 'ad', 'soyad', 'kimlik_no', 
             'telefon', 'ilce', 'mahalle', 'cadde_sokak', 'bina_no', 
             'daire_no', 'durum', 'durum_adi', 'kira_durumu', 'kira_durumu_adi',
             'aile_bilgileri'

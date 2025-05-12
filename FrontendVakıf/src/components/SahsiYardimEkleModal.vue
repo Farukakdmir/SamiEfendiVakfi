@@ -1,241 +1,256 @@
 <template>
-  <div
-    v-if="show"
-    class="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 overflow-y-auto"
+  <v-dialog
+    v-model="dialog"
+    max-width="1200px"
+    transition="dialog-bottom-transition"
   >
-    <div class="bg-white rounded-lg w-full max-w-2xl my-8 flex flex-col">
-      <!-- Modal Header -->
-      <div class="p-6 border-b border-gray-200">
-        <div class="flex justify-between items-center">
-          <h2 class="text-xl font-semibold">Yeni Şahsi Yardım Kaydı</h2>
-          <button
-            @click="$emit('close')"
-            class="text-gray-500 hover:text-gray-700 focus:outline-none"
-          >
-            <svg
-              class="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
+    <v-card class="rounded-lg">
+      <v-card-title class="text-h5 bg-emerald-800 text-white pa-4">
+        <v-icon start icon="mdi-plus" class="mr-2"></v-icon>
+        Yeni Şahsi Yardım Kaydı
+      </v-card-title>
 
-      <!-- Modal Content -->
-      <div class="p-6 overflow-y-auto">
-        <!-- Yardım Tipi Seçimi -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2"
-            >Yardım Tipi</label
-          >
-          <div class="flex gap-4">
-            <button
-              @click="selectedType = 'individual'"
-              :class="[
-                'px-4 py-2 rounded-lg',
-                selectedType === 'individual'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-              ]"
-            >
-              Bireysel
-            </button>
-            <button
-              @click="selectedType = 'group'"
-              :class="[
-                'px-4 py-2 rounded-lg',
-                selectedType === 'group'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
-              ]"
-            >
-              Grup
-            </button>
-          </div>
-        </div>
+      <v-card-text class="pa-6">
+        <v-form ref="form" v-model="isFormValid">
+          <!-- Yardım Bilgileri -->
+          <v-card class="mb-4 rounded-lg" elevation="1">
+            <v-card-title class="bg-grey-lighten-4">
+              <v-icon start icon="mdi-account" class="mr-2"></v-icon>
+              Yardım Bilgileri
+            </v-card-title>
+            <v-card-text class="pa-4">
+              <div class="grid grid-cols-2 gap-6">
+                <v-select
+                  v-model="formData.yardim_tipi"
+                  :items="yardimTipleri"
+                  label="Yardım Tipi"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[(v) => !!v || 'Yardım tipi seçiniz']"
+                ></v-select>
 
-        <!-- Bireysel Form -->
-        <div v-if="selectedType === 'individual'" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Ad Soyad</label
-            >
-            <input
-              v-model="formData.ad_soyad"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Telefon</label
-            >
-            <input
-              v-model="formData.telefon"
-              type="tel"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
+                <v-text-field
+                  v-model="formData.ad_soyad"
+                  label="Ad Soyad"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[(v) => !!v || 'Ad soyad giriniz']"
+                ></v-text-field>
 
-        <!-- Grup Form -->
-        <div v-if="selectedType === 'group'" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1"
-              >Grup Üye Sayısı</label
-            >
-            <input
-              v-model="formData.grup_uye_sayisi"
-              type="number"
-              min="1"
-              @wheel.prevent
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <!-- Yardım Eden Kişiler -->
-          <div v-if="formData.grup_uye_sayisi > 0" class="space-y-3">
-            <div
-              v-for="(helper, index) in parseInt(formData.grup_uye_sayisi)"
-              :key="index"
-              class="p-3 border border-gray-200 rounded-lg bg-gray-50"
-            >
-              <h4 class="text-sm font-medium text-gray-700 mb-2">
-                Yardım Eden Kişi {{ index + 1 }}
-              </h4>
-              <div class="space-y-2">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"
-                    >Ad Soyad</label
-                  >
-                  <input
-                    v-model="formData.yardimcilar[index].ad_soyad"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1"
-                    >Telefon</label
-                  >
-                  <input
-                    v-model="formData.yardimcilar[index].telefon"
-                    type="tel"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <v-text-field
+                  v-model="formData.telefon"
+                  label="Telefon"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[(v) => !!v || 'Telefon giriniz']"
+                ></v-text-field>
+
+                <v-text-field
+                  v-if="formData.yardim_tipi === 'group'"
+                  v-model="formData.grup_uye_sayisi"
+                  label="Grup Üye Sayısı"
+                  type="number"
+                  variant="outlined"
+                  density="comfortable"
+                  :rules="[(v) => !!v || 'Grup üye sayısı giriniz']"
+                ></v-text-field>
               </div>
-            </div>
-          </div>
-        </div>
+            </v-card-text>
+          </v-card>
 
-        <!-- Dosya Arama ve Seçme -->
-        <div class="mt-4">
-          <h4 class="text-sm font-medium text-gray-700 mb-2">
-            Yardım Yapılacak Aileler
-          </h4>
-          <div class="relative">
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-              placeholder="Dosya no, ad veya soyad ile arayın..."
-              @input="searchDosyalar"
-            />
-            <!-- Arama Sonuçları -->
-            <div
-              v-if="searchResults.length > 0 && showResults"
-              class="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto"
-            >
+          <!-- Yardımcılar -->
+          <v-card
+            v-if="formData.yardim_tipi === 'group'"
+            class="mb-4 rounded-lg"
+            elevation="1"
+          >
+            <v-card-title class="bg-grey-lighten-4">
+              <v-icon start icon="mdi-account-multiple" class="mr-2"></v-icon>
+              Yardımcılar
+            </v-card-title>
+            <v-card-text class="pa-4">
               <div
-                v-for="dosya in filteredSearchResults"
-                :key="dosya.id"
-                class="p-2 hover:bg-gray-100 cursor-pointer"
-                @click="selectDosya(dosya)"
+                v-if="formData.yardimcilar && formData.yardimcilar.length > 0"
               >
-                <div class="font-medium">{{ dosya.ad }} {{ dosya.soyad }}</div>
-                <div class="text-sm text-gray-600">
-                  Dosya No: {{ dosya.dosya_no }} - Tel: {{ dosya.telefon }}
-                </div>
-                <div class="text-sm text-gray-500">
-                  {{ dosya.mahalle }} Mah. {{ dosya.cadde_sokak }}
-                </div>
+                <v-table density="comfortable" hover class="modern-table">
+                  <thead>
+                    <tr>
+                      <th class="text-left">Ad Soyad</th>
+                      <th class="text-left">Telefon</th>
+                      <th class="text-right">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(yardimci, index) in formData.yardimcilar"
+                      :key="index"
+                      class="hover-row"
+                    >
+                      <td>{{ yardimci.ad_soyad }}</td>
+                      <td>{{ yardimci.telefon }}</td>
+                      <td class="text-right">
+                        <v-btn
+                          icon="mdi-delete"
+                          variant="text"
+                          color="error"
+                          size="small"
+                          @click="yardimciSil(index)"
+                        ></v-btn>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
               </div>
-            </div>
-          </div>
+              <p v-else class="text-sm text-gray-500">Yardımcı bulunmuyor</p>
 
-          <!-- Seçilen Dosyalar -->
-          <div v-if="selectedDosyalar.length > 0" class="mt-2 space-y-2">
-            <div
-              v-for="dosya in selectedDosyalar"
-              :key="dosya.id"
-              class="flex justify-between items-center p-3 bg-purple-50 rounded-md border border-purple-200"
-            >
-              <div class="flex-1">
-                <div class="font-medium text-purple-800">
-                  {{ dosya.ad }} {{ dosya.soyad }}
-                </div>
-                <div class="text-sm text-purple-600">
-                  Dosya No: {{ dosya.dosya_no }}
-                </div>
-                <div class="text-sm text-purple-600">
-                  {{ dosya.mahalle }} Mah. {{ dosya.cadde_sokak }}
-                </div>
-              </div>
-              <button
-                type="button"
-                @click="removeDosya(dosya)"
-                class="text-red-600 hover:text-red-800"
+              <!-- Yeni Yardımcı Ekleme Formu -->
+              <v-form
+                ref="yardimciForm"
+                v-model="isYardimciFormValid"
+                class="mt-4"
               >
-                <svg
-                  class="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <div class="grid grid-cols-2 gap-4">
+                  <v-text-field
+                    v-model="yeniYardimci.ad_soyad"
+                    label="Ad Soyad"
+                    variant="outlined"
+                    density="comfortable"
+                    :rules="[(v) => !!v || 'Ad soyad giriniz']"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="yeniYardimci.telefon"
+                    label="Telefon"
+                    variant="outlined"
+                    density="comfortable"
+                    :rules="[(v) => !!v || 'Telefon giriniz']"
+                  ></v-text-field>
+                </div>
+
+                <div class="flex justify-end mt-4">
+                  <v-btn
+                    color="primary"
+                    variant="outlined"
+                    @click="yardimciEkle"
+                    :disabled="!isYardimciFormValid"
+                  >
+                    <v-icon start icon="mdi-plus"></v-icon>
+                    Yardımcı Ekle
+                  </v-btn>
+                </div>
+              </v-form>
+            </v-card-text>
+          </v-card>
+
+          <!-- Dosya Bilgileri -->
+          <v-card class="mb-4 rounded-lg" elevation="1">
+            <v-card-title class="bg-grey-lighten-4">
+              <v-icon start icon="mdi-file-document" class="mr-2"></v-icon>
+              Yardım Edilecek Dosyalar
+            </v-card-title>
+            <v-card-text class="pa-4">
+              <v-text-field
+                v-model="searchQuery"
+                label="Dosya no, ad veya soyad ile arayın..."
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                density="comfortable"
+                @input="searchDosyalar"
+                class="mb-4"
+              ></v-text-field>
+
+              <!-- Arama Sonuçları -->
+              <v-expand-transition>
+                <div
+                  v-if="searchResults.length > 0 && showResults"
+                  class="mb-4"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+                  <v-list>
+                    <v-list-item
+                      v-for="dosya in filteredSearchResults"
+                      :key="dosya.id"
+                      @click="selectDosya(dosya)"
+                      class="cursor-pointer"
+                    >
+                      <v-list-item-title>
+                        {{ dosya.ad }} {{ dosya.soyad }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle>
+                        Dosya No: {{ dosya.dosya_no }} - Tel:
+                        {{ dosya.telefon }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </div>
+              </v-expand-transition>
 
-      <!-- Modal Footer -->
-      <div class="p-6 border-t border-gray-200 bg-gray-50">
-        <div class="flex justify-end gap-3">
-          <button
-            @click="$emit('close')"
-            class="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            İptal
-          </button>
-          <button
-            @click="saveRecord"
-            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Kaydet
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+              <!-- Seçili Dosyalar -->
+              <div v-if="selectedDosyalar.length > 0">
+                <v-table density="comfortable" hover class="modern-table">
+                  <thead>
+                    <tr>
+                      <th class="text-left">Dosya No</th>
+                      <th class="text-left">Ad Soyad</th>
+                      <th class="text-left">Telefon</th>
+                      <th class="text-right">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="dosya in selectedDosyalar"
+                      :key="dosya.id"
+                      class="hover-row"
+                    >
+                      <td>{{ dosya.dosya_no }}</td>
+                      <td>{{ dosya.ad }} {{ dosya.soyad }}</td>
+                      <td>{{ dosya.telefon }}</td>
+                      <td class="text-right">
+                        <v-btn
+                          icon="mdi-delete"
+                          variant="text"
+                          color="error"
+                          size="small"
+                          @click="removeDosya(dosya)"
+                        ></v-btn>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+              <p v-else class="text-sm text-gray-500">Dosya seçilmedi</p>
+            </v-card-text>
+          </v-card>
+        </v-form>
+      </v-card-text>
+
+      <v-card-actions class="pa-4 bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          color="error"
+          variant="outlined"
+          @click="dialog = false"
+          class="mr-2"
+        >
+          <v-icon start icon="mdi-close"></v-icon>
+          İptal
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="outlined"
+          @click="saveRecord"
+          :disabled="!isFormValid || loading"
+          :loading="loading"
+        >
+          <v-icon start icon="mdi-content-save"></v-icon>
+          {{ loading ? "Kaydediliyor..." : "Kaydet" }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, computed } from "vue";
 import apiService from "../api";
 
 export default {
@@ -248,11 +263,17 @@ export default {
   },
   emits: ["close", "saved"],
   setup(props, { emit }) {
-    const selectedType = ref("individual");
-    const searchQuery = ref("");
-    const searchResults = ref([]);
-    const showResults = ref(false);
-    const selectedDosyalar = ref([]);
+    const dialog = ref(props.show);
+    const form = ref(null);
+    const yardimciForm = ref(null);
+    const isFormValid = ref(false);
+    const isYardimciFormValid = ref(false);
+    const loading = ref(false);
+
+    const yardimTipleri = [
+      { title: "Bireysel", value: "individual" },
+      { title: "Grup", value: "group" },
+    ];
 
     const formData = ref({
       yardim_tipi: "individual",
@@ -263,12 +284,55 @@ export default {
       dosyalar: [],
     });
 
+    const yeniYardimci = ref({
+      ad_soyad: "",
+      telefon: "",
+    });
+
+    const searchQuery = ref("");
+    const searchResults = ref([]);
+    const showResults = ref(false);
+    const selectedDosyalar = ref([]);
+
     const filteredSearchResults = computed(() => {
       return searchResults.value.filter(
         (dosya) =>
           !selectedDosyalar.value.some((selected) => selected.id === dosya.id)
       );
     });
+
+    watch(
+      () => props.show,
+      (newVal) => {
+        dialog.value = newVal;
+      }
+    );
+
+    watch(dialog, (newVal) => {
+      if (!newVal) {
+        emit("close");
+        resetForm();
+      }
+    });
+
+    const yardimciEkle = () => {
+      if (!isYardimciFormValid.value) return;
+
+      formData.value.yardimcilar.push({
+        ...yeniYardimci.value,
+      });
+
+      yeniYardimci.value = {
+        ad_soyad: "",
+        telefon: "",
+      };
+
+      yardimciForm.value.reset();
+    };
+
+    const yardimciSil = (index) => {
+      formData.value.yardimcilar.splice(index, 1);
+    };
 
     const searchDosyalar = async () => {
       if (searchQuery.value.length < 2) {
@@ -278,24 +342,13 @@ export default {
       }
 
       try {
-        const response = await apiService.getDosyalar(1, 10, {
-          search: searchQuery.value,
-        });
+        const response = await apiService.searchDosyalar(searchQuery.value);
         searchResults.value = response.data.results || response.data;
         showResults.value = true;
       } catch (error) {
-        console.error("Dosyalar aranırken hata:", error);
+        console.error("Arama yapılırken hata:", error);
         searchResults.value = [];
-      }
-    };
-
-    const loadDosyalar = async () => {
-      try {
-        const response = await apiService.getDosyalar(1, 10);
-        searchResults.value = response.data.results || response.data;
-      } catch (error) {
-        console.error("Dosyalar yüklenirken hata:", error);
-        searchResults.value = [];
+        showResults.value = false;
       }
     };
 
@@ -332,55 +385,15 @@ export default {
       searchQuery.value = "";
       searchResults.value = [];
       showResults.value = false;
+      yeniYardimci.value = {
+        ad_soyad: "",
+        telefon: "",
+      };
     };
 
     const saveRecord = async () => {
-      console.log("Form verileri:", JSON.stringify(formData.value, null, 2));
-      console.log("Seçilen tip:", selectedType.value);
-
-      // Validasyon kontrolleri
-      if (selectedType.value === "individual") {
-        if (!formData.value.ad_soyad || !formData.value.ad_soyad.trim()) {
-          alert("Ad Soyad alanı zorunludur");
-          return;
-        }
-        if (!formData.value.telefon || !formData.value.telefon.trim()) {
-          alert("Telefon alanı zorunludur");
-          return;
-        }
-      } else if (selectedType.value === "group") {
-        // Grup validasyonu
-        if (
-          !formData.value.grup_uye_sayisi ||
-          formData.value.grup_uye_sayisi < 1
-        ) {
-          alert("Grup üye sayısı en az 1 olmalıdır");
-          return;
-        }
-
-        // Yardımcıların bilgilerini kontrol et
-        for (let i = 0; i < formData.value.yardimcilar.length; i++) {
-          const helper = formData.value.yardimcilar[i];
-          if (!helper.ad_soyad?.trim()) {
-            alert(
-              `${i + 1}. yardım eden kişinin ad soyad bilgisi doldurulmalıdır`
-            );
-            return;
-          }
-          if (!helper.telefon?.trim()) {
-            alert(
-              `${i + 1}. yardım eden kişinin telefon bilgisi doldurulmalıdır`
-            );
-            return;
-          }
-        }
-
-        // Grup seçildiğinde ilk yardımcının bilgilerini bireysel alanlara da kopyala
-        if (formData.value.yardimcilar.length > 0) {
-          formData.value.ad_soyad = formData.value.yardimcilar[0].ad_soyad;
-          formData.value.telefon = formData.value.yardimcilar[0].telefon;
-        }
-      }
+      const { valid } = await form.value.validate();
+      if (!valid) return;
 
       if (formData.value.dosyalar.length === 0) {
         alert("En az bir dosya seçmelisiniz");
@@ -388,16 +401,17 @@ export default {
       }
 
       try {
+        loading.value = true;
         const data = {
-          yardim_tipi: selectedType.value,
+          yardim_tipi: formData.value.yardim_tipi,
           ad_soyad: formData.value.ad_soyad.trim(),
           telefon: formData.value.telefon.trim(),
           grup_uye_sayisi:
-            selectedType.value === "group"
+            formData.value.yardim_tipi === "group"
               ? parseInt(formData.value.grup_uye_sayisi)
               : null,
           yardimcilar:
-            selectedType.value === "group"
+            formData.value.yardim_tipi === "group"
               ? formData.value.yardimcilar.map((helper) => ({
                   ad_soyad: helper.ad_soyad.trim(),
                   telefon: helper.telefon.trim(),
@@ -406,19 +420,14 @@ export default {
           dosyalar: formData.value.dosyalar,
         };
 
-        console.log("Gönderilecek veri:", JSON.stringify(data, null, 2));
         const response = await apiService.createSahsiYardim(data);
-        console.log("API Yanıtı:", response);
-
         if (response && response.data) {
           emit("saved");
-          emit("close");
+          dialog.value = false;
           resetForm();
         }
       } catch (error) {
         console.error("Form gönderilirken hata:", error);
-        console.error("Hata detayları:", error.response?.data);
-
         if (error.response?.data) {
           const errorMessages = Object.entries(error.response.data)
             .map(([key, value]) => {
@@ -432,69 +441,29 @@ export default {
         } else {
           alert("Bir hata oluştu. Lütfen tekrar deneyin.");
         }
+      } finally {
+        loading.value = false;
       }
     };
 
-    onMounted(() => {
-      loadDosyalar();
-      formData.value = {
-        yardim_tipi: "individual",
-        ad_soyad: "",
-        telefon: "",
-        grup_uye_sayisi: null,
-        yardimcilar: [],
-        dosyalar: [],
-      };
-    });
-
-    // Grup üye sayısı değiştiğinde helpers array'ini güncelle
-    watch(
-      () => formData.value.grup_uye_sayisi,
-      (newSize) => {
-        const size = parseInt(newSize) || 0;
-        // Mevcut yardımcıların bilgilerini koru
-        const currentHelpers = [...formData.value.yardimcilar];
-        formData.value.yardimcilar = Array(size)
-          .fill()
-          .map((_, index) => ({
-            ad_soyad: currentHelpers[index]?.ad_soyad || "",
-            telefon: currentHelpers[index]?.telefon || "",
-          }));
-
-        // İlk yardımcının bilgilerini bireysel alanlara kopyala
-        if (size > 0 && currentHelpers[0]) {
-          formData.value.ad_soyad = currentHelpers[0].ad_soyad;
-          formData.value.telefon = currentHelpers[0].telefon;
-        }
-      }
-    );
-
-    // selectedType değiştiğinde formData.yardim_tipi'ni güncelle
-    watch(
-      () => selectedType.value,
-      (newType) => {
-        formData.value.yardim_tipi = newType;
-        // Tip değiştiğinde ilgili alanları sıfırla
-        if (newType === "individual") {
-          formData.value.grup_uye_sayisi = null;
-          formData.value.yardimcilar = [];
-        } else if (newType === "group") {
-          // Grup seçildiğinde bireysel alanları sıfırlama
-          // İlk yardımcı eklendiğinde otomatik dolacak
-        }
-      }
-    );
-
     return {
-      selectedType,
+      dialog,
+      form,
+      yardimciForm,
+      isFormValid,
+      isYardimciFormValid,
+      loading,
+      yardimTipleri,
       formData,
+      yeniYardimci,
       searchQuery,
       searchResults,
       showResults,
       selectedDosyalar,
       filteredSearchResults,
+      yardimciEkle,
+      yardimciSil,
       searchDosyalar,
-      loadDosyalar,
       selectDosya,
       removeDosya,
       saveRecord,
@@ -503,3 +472,57 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.hover-row:hover {
+  background-color: transparent !important;
+}
+
+.v-card-title {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.modern-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-table .v-table__wrapper > table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th {
+  background-color: transparent !important;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th,
+.modern-table .v-table__wrapper > table > tbody > tr > td {
+  border: none !important;
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th {
+  background-color: transparent !important;
+}
+
+.modern-table .v-table__wrapper > table > tbody > tr > td {
+  background-color: transparent !important;
+}
+
+.modern-table .v-table__wrapper > table > tbody > tr:hover > td,
+.modern-table .v-table__wrapper > table > tbody > tr:hover {
+  background-color: transparent !important;
+}
+
+.v-table--hover
+  > .v-table__wrapper
+  > table
+  > tbody
+  > tr:hover:not(.v-data-table__expanded__content):not(
+    .v-data-table__empty-wrapper
+  ) {
+  background-color: transparent !important;
+}
+</style>

@@ -279,8 +279,16 @@ const apiService = {
     api.delete(`${apiService.endpoints.maddiYardim.base}${id}/`),
 
   // Şahsi Yardım API'leri
-  getSahsiYardimlar: (params) =>
-    api.get(apiService.endpoints.sahsiYardim.base, { params }),
+  getSahsiYardimlar: (params = {}) => {
+    // Eğer tüm kayıtlar isteniyorsa
+    if (params.all) {
+      return api.get(apiService.endpoints.sahsiYardim.base, {
+        params: { all: true },
+      });
+    }
+    // Normal sayfalama ile
+    return api.get(apiService.endpoints.sahsiYardim.base, { params });
+  },
   getSahsiYardim: (id) =>
     api.get(`${apiService.endpoints.sahsiYardim.base}${id}/`),
   createSahsiYardim: (data) => {

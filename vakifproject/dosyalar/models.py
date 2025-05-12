@@ -76,12 +76,12 @@ class Dosya(models.Model):
     )
     notlar = models.TextField(blank=True, null=True)
     guncellenme_tarihi = models.DateTimeField(auto_now=True)
-    silinme_tarihi = models.DateTimeField(null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
+    silinme_tarihi = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         db_table = 'dosyalar'
-        ordering = ['-kayit_tarihi']
+        ordering = ['dosya_no']
         default_related_name = 'dosyalar'
         
     def __str__(self):
@@ -97,16 +97,8 @@ class AileBilgisi(models.Model):
     ad = models.CharField(max_length=100)
     soyad = models.CharField(max_length=100)
     kimlik_no = models.CharField(max_length=20, blank=True, null=True)
-    yakinlik = models.CharField(
-        max_length=20,
-        choices=YakinlikSecenekleri.choices,
-        default=YakinlikSecenekleri.DIGER
-    )
-    cinsiyet = models.CharField(
-        max_length=1,
-        choices=CinsiyetSecenekleri.choices,
-        default=CinsiyetSecenekleri.ERKEK
-    )
+    yakinlik = models.CharField(max_length=20)
+    cinsiyet = models.CharField(max_length=1)
     dogum_tarihi = models.DateField(null=True, blank=True)
     engel_durumu = models.BooleanField(null=True, blank=True)
     engel_aciklama = models.TextField(blank=True, null=True)

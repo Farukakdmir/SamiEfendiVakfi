@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="flex h-screen overflow-hidden"
-    :key="'maddi-yardim-' + Date.now()"
-  >
+  <div class="flex h-screen overflow-hidden">
     <Navbar />
     <main
       class="flex-1 bg-gray-200 overflow-y-auto transition-all duration-300"
