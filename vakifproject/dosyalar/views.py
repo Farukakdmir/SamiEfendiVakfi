@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import models
 from rest_framework.pagination import PageNumberPagination
 from django.core.cache import cache
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F, Value, IntegerField, ExpressionWrapper
 from django.http import HttpResponse
 import xlsxwriter
 from io import BytesIO
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 10000  # Maksimum sayfa boyutunu artırdık
 
     def get_paginated_response(self, data):
         return Response({
@@ -36,62 +36,6 @@ class StandardResultsSetPagination(PageNumberPagination):
             'previous': self.get_previous_link(),
             'results': data
         })
-
-class DosyaFilter:
-    @staticmethod
-    def apply_search_filter(queryset, search):
-        if search:
-            return queryset.filter(
-                Q(ad__icontains=search) |
-                Q(soyad__icontains=search) |
-                Q(kimlik_no__icontains=search) |
-                Q(dosya_no__icontains=search) |
-                Q(mahalle__icontains=search) |
-                Q(cadde_sokak__icontains=search)
-            )
-        return queryset
-
-    @staticmethod
-    def apply_status_filter(queryset, status):
-        if status:
-            return queryset.filter(durum=status)
-        return queryset
-    
-    @staticmethod
-    def apply_kira_durumu_filter(queryset, kira_durumu):
-        if kira_durumu:
-            return queryset.filter(kira_durumu=kira_durumu)
-        return queryset
-    
-    @staticmethod
-    def apply_engel_durumu_filter(queryset, engel_durumu):
-        if engel_durumu == 'engelli':
-            return queryset.filter(aile_bilgileri__engel_durumu=True).distinct()
-        elif engel_durumu == 'engelli_degil':
-            return queryset.exclude(aile_bilgileri__engel_durumu=True)
-        return queryset
-    
-    @staticmethod
-    def apply_aile_uyesi_filter(queryset, min_uye, max_uye):
-        if min_uye or max_uye:
-            queryset = queryset.annotate(aile_uye_sayisi=Count('aile_bilgileri'))
-            
-        if min_uye:
-            queryset = queryset.filter(aile_uye_sayisi__gte=int(min_uye))
-        
-        if max_uye:
-            queryset = queryset.filter(aile_uye_sayisi__lte=int(max_uye))
-        
-        return queryset
-    
-    @staticmethod
-    def apply_yardim_tipi_filter(queryset, yardim_tipi):
-        if yardim_tipi:
-            if yardim_tipi == 'individual':
-                return queryset.filter(sahsi_yardimlar__yardim_tipi='individual').distinct()
-            elif yardim_tipi == 'group':
-                return queryset.filter(sahsi_yardimlar__yardim_tipi='group').distinct()
-        return queryset
 
 class DosyaViewSet(viewsets.ModelViewSet):
     """
@@ -111,50 +55,23 @@ class DosyaViewSet(viewsets.ModelViewSet):
         return DosyaSerializer
     
     def get_queryset(self):
-        cache_key = f"dosya_list_{self.request.query_params}"
-        queryset = cache.get(cache_key)
-        
-        if queryset is None:
-            queryset = Dosya.objects.select_related().prefetch_related(
-                'aile_bilgileri',
-                'sahsi_yardimlar',
-                'maddiyardim_set'
-            ).filter(is_deleted=False)
-            
-            # Filtreleri uygula
-            queryset = DosyaFilter.apply_search_filter(
-                queryset, 
-                self.request.query_params.get('search')
-            )
-            queryset = DosyaFilter.apply_status_filter(
-                queryset,
-                self.request.query_params.get('status')
-            )
-            queryset = DosyaFilter.apply_kira_durumu_filter(
-                queryset,
-                self.request.query_params.get('kira_durumu')
-            )
-            queryset = DosyaFilter.apply_engel_durumu_filter(
-                queryset,
-                self.request.query_params.get('engel_durumu')
-            )
-            queryset = DosyaFilter.apply_aile_uyesi_filter(
-                queryset,
-                self.request.query_params.get('min_aile_uyesi_sayisi'),
-                self.request.query_params.get('max_aile_uyesi_sayisi')
-            )
-            queryset = DosyaFilter.apply_yardim_tipi_filter(
-                queryset,
-                self.request.query_params.get('yardim_tipi')
-            )
-            
-            # Varsayılan sıralama
-            queryset = queryset.order_by('dosya_no')
-            
-            # Cache'e kaydet
-            cache.set(cache_key, queryset, timeout=300)  # 5 dakika cache
-        
-        return queryset
+        queryset = Dosya.objects.select_related().filter(is_deleted=False)
+        min_au = self.request.query_params.get('min_aile_uyesi_sayisi')
+        max_au = self.request.query_params.get('max_aile_uyesi_sayisi')
+        if min_au or max_au:
+            queryset = queryset.annotate(
+                aile_uyesi_sayisi=Count('aile_bilgileri', distinct=True)
+            ).annotate(
+                total_au=ExpressionWrapper(
+                    F('aile_uyesi_sayisi') + Value(1),
+                    output_field=IntegerField()
+                )
+            ).distinct()
+            if min_au:
+                queryset = queryset.filter(total_au__gte=int(min_au))
+            if max_au:
+                queryset = queryset.filter(total_au__lte=int(max_au))
+        return queryset.order_by('dosya_no')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -432,12 +349,16 @@ class DosyaViewSet(viewsets.ModelViewSet):
             status_filter = request.GET.get('status', '')
             kira_durumu = request.GET.get('kira_durumu', '')
             engel_durumu = request.GET.get('engel_durumu', '')
+            min_aile_uyesi = request.GET.get('min_aile_uyesi_sayisi', '')
+            max_aile_uyesi = request.GET.get('max_aile_uyesi_sayisi', '')
+            sahsi_yardim_tipi = request.GET.get('sahsi_yardim_tipi', '')
             
-            logger.info(f"Export request received with params: search={search}, status={status_filter}, kira_durumu={kira_durumu}, engel_durumu={engel_durumu}")
+            logger.info(f"Export request received with params: search={search}, status={status_filter}, kira_durumu={kira_durumu}, engel_durumu={engel_durumu}, min_aile_uyesi={min_aile_uyesi}, max_aile_uyesi={max_aile_uyesi}, sahsi_yardim_tipi={sahsi_yardim_tipi}")
             
             # QuerySet'i filtrele
-            dosyalar = self.get_queryset()
+            dosyalar = Dosya.objects.filter(is_deleted=False)
             
+            # Arama filtresi
             if search:
                 dosyalar = dosyalar.filter(
                     Q(ad__icontains=search) |
@@ -448,16 +369,38 @@ class DosyaViewSet(viewsets.ModelViewSet):
                     Q(cadde_sokak__icontains=search)
                 )
             
+            # Durum filtresi
             if status_filter:
                 dosyalar = dosyalar.filter(durum=status_filter)
             
+            # Kira durumu filtresi
             if kira_durumu:
                 dosyalar = dosyalar.filter(kira_durumu=kira_durumu)
             
+            # Engel durumu filtresi
             if engel_durumu == 'engelli':
                 dosyalar = dosyalar.filter(aile_bilgileri__engel_durumu=True).distinct()
             elif engel_durumu == 'engelli_degil':
                 dosyalar = dosyalar.exclude(aile_bilgileri__engel_durumu=True)
+
+            # Min/Max aile üyesi sayısı filtresi
+            if min_aile_uyesi or max_aile_uyesi:
+                # Aile üyesi sayısını hesapla (ana dosya sahibi dahil)
+                dosyalar = dosyalar.annotate(
+                    aile_uyesi_sayisi=models.Count('aile_bilgileri', distinct=True) + 1
+                )
+                
+                if min_aile_uyesi:
+                    min_aile_uyesi = int(min_aile_uyesi)
+                    dosyalar = dosyalar.filter(aile_uyesi_sayisi__gte=min_aile_uyesi)
+                
+                if max_aile_uyesi:
+                    max_aile_uyesi = int(max_aile_uyesi)
+                    dosyalar = dosyalar.filter(aile_uyesi_sayisi__lte=max_aile_uyesi)
+
+            # Şahsi yardım tipi filtresi
+            if sahsi_yardim_tipi:
+                dosyalar = dosyalar.filter(sahsi_yardim__yardim_tipi=sahsi_yardim_tipi).distinct()
             
             logger.info(f"Filtered queryset count: {dosyalar.count()}")
             
@@ -469,7 +412,7 @@ class DosyaViewSet(viewsets.ModelViewSet):
             worksheet = workbook.add_worksheet()
             
             # Başlıkları ekle
-            headers = ['Dosya No', 'Ad Soyad', 'Telefon', 'Adres', 'Durum', 'Kira Durumu', 'Engel Durumu', 'Açıklama']
+            headers = ['Dosya No', 'Ad Soyad', 'Kimlik No', 'Telefon', 'Adres', 'Durum', 'Kira Durumu', 'Engel Durumu', 'Yardım Tipi', 'Açıklama']
             for col, header in enumerate(headers):
                 worksheet.write(0, col, header)
             
@@ -487,14 +430,21 @@ class DosyaViewSet(viewsets.ModelViewSet):
                             engel_aciklamalar = dosya.aile_bilgileri.filter(engel_durumu=True).values_list('engel_aciklama', flat=True)
                             engel_aciklama = ", ".join(filter(None, engel_aciklamalar))
 
+                    # Yardım tipini kontrol et
+                    yardim_tipi = "Yok"
+                    if hasattr(dosya, 'sahsi_yardim') and dosya.sahsi_yardim:
+                        yardim_tipi = "Bireysel Yardım" if dosya.sahsi_yardim.yardim_tipi == "individual" else "Grup Yardımı"
+
                     worksheet.write(row, 0, str(dosya.dosya_no))
                     worksheet.write(row, 1, f"{dosya.ad} {dosya.soyad}")
-                    worksheet.write(row, 2, str(dosya.telefon))
-                    worksheet.write(row, 3, f"{dosya.mahalle} Mah. {dosya.cadde_sokak} Cad. No:{dosya.bina_no} Daire:{dosya.daire_no}")
-                    worksheet.write(row, 4, str(dosya.durum))
-                    worksheet.write(row, 5, str(dosya.kira_durumu))
-                    worksheet.write(row, 6, engel_durumu_text)
-                    worksheet.write(row, 7, engel_aciklama)
+                    worksheet.write(row, 2, str(dosya.kimlik_no))
+                    worksheet.write(row, 3, str(dosya.telefon))
+                    worksheet.write(row, 4, f"{dosya.mahalle} Mah. {dosya.cadde_sokak} Cad. No:{dosya.bina_no} Daire:{dosya.daire_no}")
+                    worksheet.write(row, 5, str(dosya.durum))
+                    worksheet.write(row, 6, str(dosya.kira_durumu))
+                    worksheet.write(row, 7, engel_durumu_text)
+                    worksheet.write(row, 8, yardim_tipi)
+                    worksheet.write(row, 9, engel_aciklama)
                 except Exception as e:
                     logger.error(f"Error writing row {row} for dosya {dosya.dosya_no}: {str(e)}")
                     continue
@@ -659,17 +609,25 @@ class SahsiYardimViewSet(viewsets.ModelViewSet):
     queryset = SahsiYardim.objects.all().order_by('-created_at')
     serializer_class = SahsiYardimSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Sayfalamayı devre dışı bırak
 
     def get_queryset(self):
         queryset = super().get_queryset()
         search = self.request.query_params.get('search', None)
+        
         if search:
             queryset = queryset.filter(
                 Q(ad_soyad__icontains=search) |
                 Q(telefon__icontains=search) |
                 Q(yardimcilar__ad_soyad__icontains=search)
             ).distinct()
+            
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         logger.info("Gelen ham veri:")
