@@ -574,6 +574,7 @@
 <script>
 import { ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import debounce from "lodash/debounce";
 import Navbar from "../components/Navbar.vue";
 import DosyaEkleModal from "../components/DosyaEkleModal.vue";
 import YardimDetayModal from "../components/YardimDetayModal.vue";
@@ -606,6 +607,8 @@ export default {
     const minAileUyesiSayisi = ref(null);
     const maxAileUyesiSayisi = ref(null);
     const showFilters = ref(false);
+    const windowObj = window;
+    const URLObj = window.URL || window.webkitURL;
     const currentPage = ref(1);
     const itemsPerPage = ref(10);
     const totalItems = ref(0);
@@ -614,12 +617,75 @@ export default {
     const showYardimDetayModal = ref(false);
     const selectedDosyaForYardim = ref(null);
     const selectedYardimTipi = ref("");
-    const showNoResults = ref(false);
-    const error = ref(null);
 
-    const totalPages = computed(() => {
-      return Math.ceil(totalItems.value / itemsPerPage.value);
-    });
+    const validateFilters = () => {
+      // Aile üyesi sayısı kontrolü
+      if (minAileUyesiSayisi.value && maxAileUyesiSayisi.value) {
+        if (
+          Number(minAileUyesiSayisi.value) > Number(maxAileUyesiSayisi.value)
+        ) {
+          alert("Minimum aile üyesi sayısı, maksimum değerden büyük olamaz!");
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const loadDosyalar = async () => {
+      if (isLoading.value) return;
+      if (!validateFilters()) return;
+
+      try {
+        isLoading.value = true;
+        const params = new URLSearchParams();
+
+        // Sayfalama parametreleri
+        params.append("page", currentPage.value);
+        params.append("page_size", itemsPerPage.value);
+
+        // Arama parametresi
+        if (searchQuery.value) {
+          params.append("search", searchQuery.value);
+        }
+
+        // Filtre parametreleri
+        if (selectedStatus.value) {
+          params.append("status", selectedStatus.value);
+        }
+        if (selectedKiraDurumu.value) {
+          params.append("kira_durumu", selectedKiraDurumu.value);
+        }
+        if (selectedEngelDurumu.value) {
+          params.append("engel_durumu", selectedEngelDurumu.value);
+        }
+        if (minAileUyesiSayisi.value) {
+          params.append("min_aile_uyesi_sayisi", minAileUyesiSayisi.value);
+        }
+        if (maxAileUyesiSayisi.value) {
+          params.append("max_aile_uyesi_sayisi", maxAileUyesiSayisi.value);
+        }
+        if (selectedYardimTipi.value) {
+          params.append("yardim_tipi", selectedYardimTipi.value);
+        }
+
+        const response = await apiService.get(
+          `/dosyalar/?${params.toString()}`
+        );
+        dosyalar.value = response.data.results;
+        totalItems.value = response.data.count || 0;
+      } catch (error) {
+        console.error("Dosyalar yüklenirken hata:", error);
+        dosyalar.value = [];
+        totalItems.value = 0;
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    // Sayfalama hesaplamaları
+    const totalPages = computed(() =>
+      Math.ceil(totalItems.value / itemsPerPage.value)
+    );
 
     const displayedPages = computed(() => {
       const pages = [];
@@ -653,12 +719,36 @@ export default {
       return pages;
     });
 
-    const filteredDosyalar = computed(() => {
-      return dosyalar.value;
+    // Debounced loadDosyalar
+    const debouncedLoadDosyalar = debounce(() => {
+      currentPage.value = 1;
+      loadDosyalar();
+    }, 300);
+
+    // Watch filtreleri
+    watch(
+      [
+        searchQuery,
+        selectedStatus,
+        selectedKiraDurumu,
+        selectedEngelDurumu,
+        selectedYardimTipi,
+        minAileUyesiSayisi,
+        maxAileUyesiSayisi,
+      ],
+      () => {
+        debouncedLoadDosyalar();
+      }
+    );
+
+    // Watch sayfa değişimi
+    watch(currentPage, () => {
+      loadDosyalar();
     });
 
     // Yardım tipini al
     const getYardimTipi = (dosya) => {
+      // Dosyanın yardım tipini kontrol et
       if (dosya.yardim_tipi === "individual" || dosya.yardim_tipi === "group") {
         return dosya.yardim_tipi;
       }
@@ -676,36 +766,6 @@ export default {
       return "";
     };
 
-    // Durum sınıfını al
-    const getStatusClass = (status) => {
-      const statusClasses = {
-        BEKLEMEDE: "bg-yellow-100 text-yellow-800",
-        ONAYLANDI: "bg-green-100 text-green-800",
-        REDDEDILDI: "bg-red-100 text-red-800",
-      };
-      return statusClasses[status] || "bg-gray-100 text-gray-800";
-    };
-
-    // Engel durumu metnini al
-    const getEngelDurumuText = (dosya) => {
-      if (!dosya.aile_bilgileri || dosya.aile_bilgileri.length === 0) {
-        return dosya.engel_durumu
-          ? "Aile Engel Durumu Var"
-          : "Aile Engel Durumu Yok";
-      }
-
-      const engelliCount = dosya.aile_bilgileri.filter(
-        (member) => member.engel_durumu
-      ).length;
-      const hasEngelli = engelliCount > 0 || dosya.engel_durumu;
-
-      return hasEngelli
-        ? `Aile Engel Durumu Var (${
-            engelliCount + (dosya.engel_durumu ? 1 : 0)
-          } kişi)`
-        : "Aile Engel Durumu Yok";
-    };
-
     // Filtreleri temizle
     const clearFilters = () => {
       selectedStatus.value = "";
@@ -721,119 +781,27 @@ export default {
       searchQuery.value = "";
     };
 
-    const loadDosyalar = async () => {
-      try {
-        isLoading.value = true;
-        const params = new URLSearchParams();
-        params.append("page", currentPage.value);
-        params.append("page_size", itemsPerPage.value);
-
-        // Arama filtresi
-        if (searchQuery.value) {
-          params.append("search", searchQuery.value);
-        }
-
-        // Durum filtresi
-        if (selectedStatus.value) {
-          params.append("status", selectedStatus.value);
-        }
-
-        // Kira durumu filtresi
-        if (selectedKiraDurumu.value) {
-          params.append("kira_durumu", selectedKiraDurumu.value);
-        }
-
-        // Engel durumu filtresi
-        if (selectedEngelDurumu.value) {
-          params.append("engel_durumu", selectedEngelDurumu.value);
-        }
-
-        // Aile üyesi sayısı filtresi
-        if (minAileUyesiSayisi.value) {
-          params.append("min_aile_uyesi_sayisi", minAileUyesiSayisi.value);
-        }
-        if (maxAileUyesiSayisi.value) {
-          params.append("max_aile_uyesi_sayisi", maxAileUyesiSayisi.value);
-        }
-
-        // Yardım tipi filtresi
-        if (selectedYardimTipi.value) {
-          params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
-        }
-
-        // Dosya verilerini al
-        const response = await apiService.get(
-          `/dosyalar/?${params.toString()}`
-        );
-        const dosyaData = response.data.results;
-
-        // Yardım verilerini al
-        const yardimResponse = await apiService.getSahsiYardimlar();
-        const yardimlar = yardimResponse.data.results || yardimResponse.data;
-
-        // Dosya verilerini işle ve yardım tipini ekle
-        dosyalar.value = dosyaData.map((dosya) => {
-          const yardim = yardimlar.find(
-            (y) => y.dosyalar && y.dosyalar.some((d) => d.id === dosya.id)
-          );
-          return {
-            ...dosya,
-            yardim_tipi: yardim ? yardim.yardim_tipi : null,
-          };
-        });
-
-        // Toplam kayıt sayısını güncelle
-        totalItems.value = response.data.count;
-
-        // Filtreleme yapıldıysa ve sonuç yoksa
-        if (
-          totalItems.value === 0 &&
-          (searchQuery.value ||
-            selectedStatus.value ||
-            selectedKiraDurumu.value ||
-            selectedEngelDurumu.value ||
-            minAileUyesiSayisi.value ||
-            maxAileUyesiSayisi.value ||
-            selectedYardimTipi.value)
-        ) {
-          showNoResults.value = true;
-        } else {
-          showNoResults.value = false;
-        }
-      } catch (error) {
-        console.error("Dosyalar yüklenirken hata:", error);
-        error.value = "Dosyalar yüklenirken bir hata oluştu.";
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    // Filtreler değiştiğinde dosyaları yeniden yükle
-    watch(
-      [
-        searchQuery,
-        selectedStatus,
-        selectedKiraDurumu,
-        selectedEngelDurumu,
-        selectedYardimTipi,
-        minAileUyesiSayisi,
-        maxAileUyesiSayisi,
-      ],
-      () => {
-        currentPage.value = 1; // Filtre değiştiğinde ilk sayfaya dön
-        loadDosyalar();
-      }
-    );
-
-    // Sayfa değiştiğinde dosyaları yeniden yükle
-    watch(currentPage, () => {
-      loadDosyalar();
-    });
-
     // Sayfa yüklendiğinde verileri getir
     onMounted(() => {
       loadDosyalar();
+      document.addEventListener("click", handleClickOutside);
     });
+
+    // Sayfa kapatıldığında
+    onUnmounted(() => {
+      document.removeEventListener("click", handleClickOutside);
+    });
+
+    const filteredDosyalar = computed(() => dosyalar.value);
+
+    const getStatusClass = (status) => {
+      const statusClasses = {
+        BEKLEMEDE: "bg-yellow-100 text-yellow-800",
+        ONAYLANDI: "bg-green-100 text-green-800",
+        REDDEDILDI: "bg-red-100 text-red-800",
+      };
+      return statusClasses[status] || "bg-gray-100 text-gray-800";
+    };
 
     const editDosya = async (dosya) => {
       try {
@@ -928,35 +896,194 @@ export default {
         if (maxAileUyesiSayisi.value)
           params.append("max_aile_uyesi_sayisi", maxAileUyesiSayisi.value);
         if (selectedYardimTipi.value)
-          params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
+          params.append("yardim_tipi", selectedYardimTipi.value);
 
-        // Backend'den Excel dosyasını al
-        const response = await apiService.get(
-          `/dosyalar/export_excel/?${params.toString()}`,
-          {
-            responseType: "blob",
-          }
+        // İlk sayfayı al ve toplam kayıt sayısını öğren
+        params.append("page", 1);
+        params.append("page_size", 100); // Her sayfada 100 kayıt al
+
+        const firstResponse = await apiService.get(
+          `/dosyalar/?${params.toString()}`
         );
+        const totalCount = firstResponse.data.count;
+        const totalPages = Math.ceil(totalCount / 100);
+
+        console.log(`Toplam kayıt sayısı: ${totalCount}`);
+        console.log(`Toplam sayfa sayısı: ${totalPages}`);
+
+        // Tüm kayıtları topla
+        let allDosyalar = [...firstResponse.data.results];
+
+        // Diğer sayfaları al
+        for (let page = 2; page <= totalPages; page++) {
+          params.set("page", page);
+          const response = await apiService.get(
+            `/dosyalar/?${params.toString()}`
+          );
+          allDosyalar = [...allDosyalar, ...response.data.results];
+          console.log(
+            `Sayfa ${page} yüklendi. Toplam kayıt: ${allDosyalar.length}`
+          );
+        }
+
+        console.log(`Tüm kayıtlar yüklendi. Toplam: ${allDosyalar.length}`);
+
+        // Excel için veri hazırlama
+        const data = [];
+
+        // Başlık satırı
+        data.push([
+          "Dosya No",
+          "Ad Soyad",
+          "Kimlik No",
+          "Telefon",
+          "Adres",
+          "Durum",
+          "Engel Durumu",
+          "Yardım Tipi",
+          "Kayıt Tarihi",
+        ]);
+
+        // Kayıtları ekle
+        for (const dosya of allDosyalar) {
+          try {
+            // Her dosya için yardım tipini kontrol et
+            const yardimResponse = await apiService.getSahsiYardimlar();
+            const yardimlar =
+              yardimResponse.data.results || yardimResponse.data;
+
+            const dosyaYardimlari = yardimlar.filter((yardim) => {
+              if (!yardim.dosyalar) return false;
+              return yardim.dosyalar.some((d) => d.id === dosya.id);
+            });
+
+            let yardimTipi = null;
+            if (dosyaYardimlari.length > 0) {
+              yardimTipi = dosyaYardimlari[0].yardim_tipi;
+            }
+
+            // Yardım tipi filtresini uygula
+            if (
+              selectedYardimTipi.value &&
+              yardimTipi !== selectedYardimTipi.value
+            ) {
+              continue; // Bu kaydı atla
+            }
+
+            // Kaydı Excel'e ekle
+            data.push([
+              dosya.dosya_no,
+              `${dosya.ad} ${dosya.soyad}`,
+              dosya.kimlik_no,
+              dosya.telefon,
+              formatAddress(dosya),
+              dosya.durum,
+              getEngelDurumuText(dosya),
+              getYardimTipiText({ yardim_tipi: yardimTipi }),
+              formatDate(dosya.kayit_tarihi),
+            ]);
+          } catch (error) {
+            console.error("Yardım detayları alınırken hata:", error);
+            // Hata durumunda da kaydı ekle
+            data.push([
+              dosya.dosya_no,
+              `${dosya.ad} ${dosya.soyad}`,
+              dosya.kimlik_no,
+              dosya.telefon,
+              formatAddress(dosya),
+              dosya.durum,
+              getEngelDurumuText(dosya),
+              "-",
+              formatDate(dosya.kayit_tarihi),
+            ]);
+          }
+        }
+
+        // Excel dosyası oluştur
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Dosya Kayıtları");
+
+        // Sütun genişliklerini ayarla
+        const colWidths = [
+          { wch: 15 }, // Dosya No
+          { wch: 30 }, // Ad Soyad
+          { wch: 15 }, // Kimlik No
+          { wch: 15 }, // Telefon
+          { wch: 50 }, // Adres
+          { wch: 15 }, // Durum
+          { wch: 25 }, // Engel Durumu
+          { wch: 20 }, // Yardım Tipi
+          { wch: 15 }, // Kayıt Tarihi
+        ];
+        ws["!cols"] = colWidths;
 
         // Dosya adını oluştur
         const fileName = `DosyaKayitlari_${new Date()
           .toLocaleDateString("tr-TR")
           .replace(/\./g, "-")}.xlsx`;
 
-        // Dosyayı indir
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+        // Excel dosyasını indir
+        XLSX.writeFile(wb, fileName);
       } catch (error) {
         console.error("Excel export error:", error);
-        alert(
-          "Excel dosyası oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin."
-        );
+        if (error.response && error.response.data) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errorData = JSON.parse(reader.result);
+              alert(
+                `Excel dosyası oluşturulurken bir hata oluştu: ${
+                  errorData.error || "Bilinmeyen hata"
+                }`
+              );
+            } catch (e) {
+              alert("Excel dosyası oluşturulurken bir hata oluştu.");
+            }
+          };
+          reader.readAsText(error.response.data);
+        } else {
+          alert("Excel dosyası oluşturulurken bir hata oluştu.");
+        }
+      }
+    };
+
+    const getEngelDurumuText = (dosya) => {
+      if (!dosya.aile_bilgileri || dosya.aile_bilgileri.length === 0) {
+        return dosya.engel_durumu
+          ? "Aile Engel Durumu Var"
+          : "Aile Engel Durumu Yok";
+      }
+
+      const engelliCount = dosya.aile_bilgileri.filter(
+        (member) => member.engel_durumu
+      ).length;
+      const hasEngelli = engelliCount > 0 || dosya.engel_durumu;
+
+      return hasEngelli
+        ? `Aile Engel Durumu Var (${
+            engelliCount + (dosya.engel_durumu ? 1 : 0)
+          } kişi)`
+        : "Aile Engel Durumu Yok";
+    };
+
+    const toggleOperations = (dosyaNo) => {
+      if (activeOperations.value === dosyaNo) {
+        activeOperations.value = null;
+      } else {
+        activeOperations.value = dosyaNo;
+      }
+    };
+
+    const resetForm = () => {
+      selectedDosya.value = null;
+      editMode.value = false;
+    };
+
+    const handleClickOutside = (event) => {
+      const filterButton = event.target.closest(".relative");
+      if (!filterButton) {
+        showFilters.value = false;
       }
     };
 
@@ -1023,19 +1150,6 @@ export default {
       }
     };
 
-    const toggleOperations = (dosyaNo) => {
-      if (activeOperations.value === dosyaNo) {
-        activeOperations.value = null;
-      } else {
-        activeOperations.value = dosyaNo;
-      }
-    };
-
-    const resetForm = () => {
-      selectedDosya.value = null;
-      editMode.value = false;
-    };
-
     return {
       dosyalar,
       showModal,
@@ -1048,6 +1162,7 @@ export default {
       minAileUyesiSayisi,
       maxAileUyesiSayisi,
       username,
+      BELGE_TURU_CHOICES,
       getStatusClass,
       loadDosyalar,
       editDosya,
@@ -1063,6 +1178,8 @@ export default {
       DURUM_CHOICES,
       printDosya: printDosyaHandler,
       exportToExcel,
+      windowObj,
+      URLObj,
       filteredDosyalar,
       currentPage,
       totalPages,
@@ -1084,8 +1201,6 @@ export default {
       getYardimTipiText,
       selectedYardimTipi,
       itemsPerPage,
-      showNoResults,
-      error,
     };
   },
 };
