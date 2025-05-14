@@ -744,8 +744,10 @@ export default {
         }
 
         // Engel durumu filtresi
-        if (selectedEngelDurumu.value) {
-          params.append("engel_durumu", selectedEngelDurumu.value);
+        if (selectedEngelDurumu.value === "engelli") {
+          params.append("engel_durumu", "true");
+        } else if (selectedEngelDurumu.value === "engelli_degil") {
+          params.append("engel_durumu", "false");
         }
 
         // Aile üyesi sayısı filtresi
