@@ -56,6 +56,26 @@ class DosyaViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Dosya.objects.select_related().filter(is_deleted=False)
+        
+        # Durum filtresi
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(durum=status)
+        
+        # Kira durumu filtresi
+        kira_durumu = self.request.query_params.get('kira_durumu')
+        if kira_durumu:
+            queryset = queryset.filter(kira_durumu=kira_durumu)
+        
+        # Engel durumu filtresi
+        engel_durumu = self.request.query_params.get('engel_durumu')
+        if engel_durumu:
+            if engel_durumu.lower() == 'true':
+                queryset = queryset.filter(Q(engel_durumu=True) | Q(aile_bilgileri__engel_durumu=True)).distinct()
+            elif engel_durumu.lower() == 'false':
+                queryset = queryset.exclude(Q(engel_durumu=True) | Q(aile_bilgileri__engel_durumu=True))
+        
+        # Aile üyesi sayısı filtresi
         min_au = self.request.query_params.get('min_aile_uyesi_sayisi')
         max_au = self.request.query_params.get('max_aile_uyesi_sayisi')
         if min_au or max_au:
@@ -71,6 +91,12 @@ class DosyaViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(total_au__gte=int(min_au))
             if max_au:
                 queryset = queryset.filter(total_au__lte=int(max_au))
+        
+        # Yardım tipi filtresi
+        yardim_tipi = self.request.query_params.get('sahsi_yardim_tipi')
+        if yardim_tipi:
+            queryset = queryset.filter(sahsi_yardimlar__yardim_tipi=yardim_tipi).distinct()
+        
         return queryset.order_by('dosya_no')
 
     def list(self, request, *args, **kwargs):
