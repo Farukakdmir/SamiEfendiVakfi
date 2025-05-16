@@ -74,6 +74,7 @@ class Dosya(models.Model):
         choices=DurumSecenekleri.choices,
         default=DurumSecenekleri.BEKLEMEDE
     )
+    engel_durumu = models.BooleanField(default=False, verbose_name="Engel Durumu")
     notlar = models.TextField(blank=True, null=True)
     guncellenme_tarihi = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
