@@ -55,57 +55,74 @@ class DosyaViewSet(viewsets.ModelViewSet):
         return DosyaSerializer
     
     def get_queryset(self):
-        queryset = Dosya.objects.select_related().filter(is_deleted=False)
-        
-        # Durum filtresi
-        status = self.request.query_params.get('status')
-        if status:
-            queryset = queryset.filter(durum=status)
-        
-        # Kira durumu filtresi
-        kira_durumu = self.request.query_params.get('kira_durumu')
-        if kira_durumu:
-            queryset = queryset.filter(kira_durumu=kira_durumu)
-        
-        # Engel durumu filtresi
-        engel_durumu = self.request.query_params.get('engel_durumu')
-        if engel_durumu:
-            if engel_durumu.lower() == 'true':
-                # Ana başvuru sahibi veya aile üyelerinden herhangi birinin engel durumu varsa getir
-                queryset = queryset.filter(
-                    Q(engel_durumu=True) | 
-                    Q(aile_bilgileri__engel_durumu=True)
+        try:
+            queryset = Dosya.objects.select_related().filter(is_deleted=False)
+            
+            # Debug: Gelen parametreleri logla
+            logger.info("Query params: %s", self.request.query_params)
+            
+            # Durum filtresi
+            status = self.request.query_params.get('status')
+            if status:
+                queryset = queryset.filter(durum=status)
+            
+            # Kira durumu filtresi
+            kira_durumu = self.request.query_params.get('kira_durumu')
+            if kira_durumu:
+                queryset = queryset.filter(kira_durumu=kira_durumu)
+            
+            # Engel durumu filtresi
+            engel_durumu = self.request.query_params.get('engel_durumu')
+            if engel_durumu:
+                logger.info("Engel durumu filtresi: %s", engel_durumu)
+                try:
+                    if engel_durumu.lower() == 'true':
+                        # Ana başvuru sahibi veya aile üyelerinden herhangi birinin engel durumu varsa getir
+                        queryset = queryset.filter(
+                            Q(engel_durumu=True) | 
+                            Q(aile_bilgileri__engel_durumu=True)
+                        ).distinct()
+                        logger.info("Engelli filtrelemesi yapıldı")
+                    elif engel_durumu.lower() == 'false':
+                        # Ne ana başvuru sahibinin ne de aile üyelerinin engel durumu yoksa getir
+                        queryset = queryset.filter(
+                            Q(engel_durumu=False) & 
+                            ~Q(aile_bilgileri__engel_durumu=True)
+                        )
+                        logger.info("Engelli olmayan filtrelemesi yapıldı")
+                except Exception as e:
+                    logger.error("Engel durumu filtrelemesinde hata: %s", str(e))
+                    raise
+            
+            # Aile üyesi sayısı filtresi
+            min_au = self.request.query_params.get('min_aile_uyesi_sayisi')
+            max_au = self.request.query_params.get('max_aile_uyesi_sayisi')
+            if min_au or max_au:
+                queryset = queryset.annotate(
+                    aile_uyesi_sayisi=Count('aile_bilgileri', distinct=True)
+                ).annotate(
+                    total_au=ExpressionWrapper(
+                        F('aile_uyesi_sayisi') + Value(1),
+                        output_field=IntegerField()
+                    )
                 ).distinct()
-            elif engel_durumu.lower() == 'false':
-                # Ne ana başvuru sahibinin ne de aile üyelerinin engel durumu yoksa getir
-                queryset = queryset.exclude(
-                    Q(engel_durumu=True) | 
-                    Q(aile_bilgileri__engel_durumu=True)
-                )
-        
-        # Aile üyesi sayısı filtresi
-        min_au = self.request.query_params.get('min_aile_uyesi_sayisi')
-        max_au = self.request.query_params.get('max_aile_uyesi_sayisi')
-        if min_au or max_au:
-            queryset = queryset.annotate(
-                aile_uyesi_sayisi=Count('aile_bilgileri', distinct=True)
-            ).annotate(
-                total_au=ExpressionWrapper(
-                    F('aile_uyesi_sayisi') + Value(1),
-                    output_field=IntegerField()
-                )
-            ).distinct()
-            if min_au:
-                queryset = queryset.filter(total_au__gte=int(min_au))
-            if max_au:
-                queryset = queryset.filter(total_au__lte=int(max_au))
-        
-        # Yardım tipi filtresi
-        yardim_tipi = self.request.query_params.get('sahsi_yardim_tipi')
-        if yardim_tipi:
-            queryset = queryset.filter(sahsi_yardimlar__yardim_tipi=yardim_tipi).distinct()
-        
-        return queryset.order_by('dosya_no')
+                if min_au:
+                    queryset = queryset.filter(total_au__gte=int(min_au))
+                if max_au:
+                    queryset = queryset.filter(total_au__lte=int(max_au))
+            
+            # Yardım tipi filtresi
+            yardim_tipi = self.request.query_params.get('sahsi_yardim_tipi')
+            if yardim_tipi:
+                queryset = queryset.filter(sahsi_yardimlar__yardim_tipi=yardim_tipi).distinct()
+            
+            # Debug: SQL sorgusunu logla
+            logger.info("SQL query: %s", str(queryset.query))
+            
+            return queryset.order_by('dosya_no')
+        except Exception as e:
+            logger.error("get_queryset'de hata: %s", str(e))
+            raise
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
