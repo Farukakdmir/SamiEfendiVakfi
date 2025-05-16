@@ -71,9 +71,17 @@ class DosyaViewSet(viewsets.ModelViewSet):
         engel_durumu = self.request.query_params.get('engel_durumu')
         if engel_durumu:
             if engel_durumu.lower() == 'true':
-                queryset = queryset.filter(Q(engel_durumu=True) | Q(aile_bilgileri__engel_durumu=True)).distinct()
+                # Ana başvuru sahibi veya aile üyelerinden herhangi birinin engel durumu varsa getir
+                queryset = queryset.filter(
+                    Q(engel_durumu=True) | 
+                    Q(aile_bilgileri__engel_durumu=True)
+                ).distinct()
             elif engel_durumu.lower() == 'false':
-                queryset = queryset.exclude(Q(engel_durumu=True) | Q(aile_bilgileri__engel_durumu=True))
+                # Ne ana başvuru sahibinin ne de aile üyelerinin engel durumu yoksa getir
+                queryset = queryset.exclude(
+                    Q(engel_durumu=True) | 
+                    Q(aile_bilgileri__engel_durumu=True)
+                )
         
         # Aile üyesi sayısı filtresi
         min_au = self.request.query_params.get('min_aile_uyesi_sayisi')
