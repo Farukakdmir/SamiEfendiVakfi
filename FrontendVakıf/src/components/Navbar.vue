@@ -48,7 +48,7 @@
           <ul class="py-4">
             <li>
               <router-link
-                to="/"
+                to="/home"
                 exact
                 class="flex items-center px-6 py-3 text-white hover:bg-emerald-900 transition-all duration-200 transform hover:translate-x-2 hover:shadow-md active:bg-emerald-950"
                 active-class="bg-emerald-950 shadow-md"

@@ -8,7 +8,7 @@
         <img src="../assets/logo.png" alt="Sami Efendi Vakfı" class="h-20" />
       </div>
       <form class="mt-8 space-y-8" @submit.prevent="handleLogin">
-        <div class="rounded-md shadow-sm -space-y-px">
+        <div class="rounded-md shadow-sm space-y-4">
           <div>
             <label for="username" class="sr-only">Kullanıcı Adı</label>
             <input
@@ -16,20 +16,22 @@
               v-model="username"
               type="text"
               required
-              class="appearance-none rounded-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 text-lg"
+              class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 text-lg"
               placeholder="Kullanıcı Adı"
             />
           </div>
-          <div>
+          <div class="relative">
             <label for="password" class="sr-only">Şifre</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              required
-              class="appearance-none rounded-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 text-lg"
-              placeholder="Şifre"
-            />
+            <div class="relative">
+              <input
+                id="password"
+                v-model="password"
+                type="password"
+                required
+                class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 text-lg"
+                placeholder="Şifre"
+              />
+            </div>
           </div>
         </div>
 
