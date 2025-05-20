@@ -186,6 +186,23 @@
           </div>
         </div>
 
+        <!-- No Results Message -->
+        <div v-if="showNoResults" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">
+            Arama kriterlerinize uygun sonuç bulunamadı.
+          </p>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoading" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">Yükleniyor...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="error" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-red-500 text-center">{{ error }}</p>
+        </div>
+
         <!-- Sayfalama -->
         <div class="bg-white rounded-lg shadow mb-4">
           <div
@@ -340,6 +357,7 @@
           </div>
         </div>
 
+        <!-- Table -->
         <div class="bg-white rounded-lg shadow">
           <div class="overflow-x-auto">
             <table class="w-full table-fixed">
@@ -394,7 +412,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr
-                  v-for="dosya in dosyalar"
+                  v-for="dosya in filteredDosyalar"
                   :key="dosya.dosya_no"
                   class="hover:bg-gray-50"
                 >
@@ -654,7 +672,26 @@ export default {
     });
 
     const filteredDosyalar = computed(() => {
-      return dosyalar.value;
+      if (!searchQuery.value) return dosyalar.value;
+      const query = searchQuery.value.toLowerCase();
+      return dosyalar.value.filter((dosya) => {
+        // String değerleri kontrol et
+        const ad = (dosya.ad || "").toString().toLowerCase();
+        const soyad = (dosya.soyad || "").toString().toLowerCase();
+        const adres = (dosya.adres || "").toString().toLowerCase();
+
+        // Sayısal değerleri string'e çevir
+        const dosyaNo = (dosya.dosya_no || "").toString();
+        const kimlikNo = (dosya.kimlik_no || "").toString();
+
+        return (
+          ad.includes(query) ||
+          soyad.includes(query) ||
+          dosyaNo.includes(query) ||
+          kimlikNo.includes(query) ||
+          adres.includes(query)
+        );
+      });
     });
 
     // Yardım tipini al
@@ -721,16 +758,22 @@ export default {
       searchQuery.value = "";
     };
 
+    const handleSearch = () => {
+      currentPage.value = 1;
+      loadDosyalar();
+    };
+
     const loadDosyalar = async () => {
       try {
         isLoading.value = true;
+        error.value = null;
         const params = new URLSearchParams();
         params.append("page", currentPage.value);
         params.append("page_size", itemsPerPage.value);
 
-        // Arama filtresi
-        if (searchQuery.value) {
-          params.append("search", searchQuery.value);
+        // Arama filtresi - trim ve boşluk kontrolü ekle
+        if (searchQuery.value && searchQuery.value.trim()) {
+          params.append("search", searchQuery.value.trim());
         }
 
         // Durum filtresi
@@ -763,10 +806,21 @@ export default {
           params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
         }
 
+        console.log("Search params:", params.toString());
+
         // Dosya verilerini al
         const response = await apiService.get(
           `/dosyalar/?${params.toString()}`
         );
+        console.log("API Response:", response.data);
+
+        if (!response.data || !response.data.results) {
+          console.error("Invalid response format:", response.data);
+          dosyalar.value = [];
+          totalItems.value = 0;
+          return;
+        }
+
         const dosyaData = response.data.results;
 
         // Yardım verilerini al
@@ -784,8 +838,10 @@ export default {
           };
         });
 
+        console.log("Processed dosyalar:", dosyalar.value);
+
         // Toplam kayıt sayısını güncelle
-        totalItems.value = response.data.count;
+        totalItems.value = response.data.count || 0;
 
         // Filtreleme yapıldıysa ve sonuç yoksa
         if (
@@ -804,16 +860,33 @@ export default {
         }
       } catch (error) {
         console.error("Dosyalar yüklenirken hata:", error);
+        console.error("Hata detayı:", error.response?.data);
         error.value = "Dosyalar yüklenirken bir hata oluştu.";
+        dosyalar.value = [];
+        totalItems.value = 0;
       } finally {
         isLoading.value = false;
       }
     };
 
+    // Debounce fonksiyonu ekle
+    const debounce = (fn, delay) => {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+      };
+    };
+
+    // Debounced loadDosyalar fonksiyonu
+    const debouncedLoadDosyalar = debounce(() => {
+      currentPage.value = 1; // Arama yapıldığında ilk sayfaya dön
+      loadDosyalar();
+    }, 300);
+
     // Filtreler değiştiğinde dosyaları yeniden yükle
     watch(
       [
-        searchQuery,
         selectedStatus,
         selectedKiraDurumu,
         selectedEngelDurumu,
@@ -826,6 +899,12 @@ export default {
         loadDosyalar();
       }
     );
+
+    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
+    watch(searchQuery, (newValue) => {
+      console.log("Search query changed:", newValue);
+      debouncedLoadDosyalar();
+    });
 
     // Sayfa değiştiğinde dosyaları yeniden yükle
     watch(currentPage, () => {
@@ -1088,6 +1167,7 @@ export default {
       itemsPerPage,
       showNoResults,
       error,
+      handleSearch,
     };
   },
 };
