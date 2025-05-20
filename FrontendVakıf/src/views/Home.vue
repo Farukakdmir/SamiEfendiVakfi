@@ -16,6 +16,33 @@
           </div>
         </div>
 
+        <!-- Toplam Maddi Yardım Widget -->
+        <div class="max-w-3xl mx-auto mb-8">
+          <div class="bg-white overflow-hidden shadow-lg rounded-lg">
+            <div class="p-6">
+              <div class="flex items-center justify-center">
+                <div class="flex-shrink-0">
+                  <div class="rounded-md p-4 bg-purple-100">
+                    <i
+                      class="fas fa-hand-holding-usd text-purple-600 text-2xl"
+                    ></i>
+                  </div>
+                </div>
+                <div class="ml-6">
+                  <h3 class="text-lg font-medium text-gray-900">
+                    Toplam Maddi Yardım
+                  </h3>
+                  <div class="mt-2">
+                    <span class="text-3xl font-bold text-gray-900">
+                      {{ formatCurrency(stats.toplam_maddi_yardim || 0) }} ₺
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- İstatistik Kartları -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <!-- Toplam Dosya -->
@@ -48,7 +75,7 @@
             <div class="p-5">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <div class="rounded-md p-3 bg-yellow-100">
+                  <div class="rounded-md p-3 bg-yellow-200">
                     <i class="fas fa-clock text-yellow-600 text-xl"></i>
                   </div>
                 </div>
@@ -73,8 +100,8 @@
             <div class="p-5">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <div class="rounded-md p-3 bg-blue-100">
-                    <i class="fas fa-check-circle text-blue-600 text-xl"></i>
+                  <div class="rounded-md p-3 bg-green-200">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
                   </div>
                 </div>
                 <div class="ml-5 w-0 flex-1">
@@ -98,7 +125,7 @@
             <div class="p-5">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <div class="rounded-md p-3 bg-red-100">
+                  <div class="rounded-md p-3 bg-red-200">
                     <i class="fas fa-times-circle text-red-600 text-xl"></i>
                   </div>
                 </div>
@@ -139,6 +166,78 @@
             <div class="h-80">
               <BarChart :data="barChartData" :options="barChartOptions" />
             </div>
+          </div>
+        </div>
+
+        <!-- Son İşlemler Widget -->
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-8">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">Son 10 İşlem</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    İşlem Türü
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Ad Soyad
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Tutar
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Tarih
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Durum
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr
+                  v-for="islem in sonIslemler"
+                  :key="islem.id"
+                  class="hover:bg-gray-50"
+                >
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ islem.islem_turu }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ islem.ad_soyad }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ formatCurrency(islem.tutar) }} ₺
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ formatDate(islem.tarih) }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      :class="[
+                        'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
+                        islem.durum === 'Onaylandı'
+                          ? 'bg-green-100 text-green-800'
+                          : islem.durum === 'Beklemede'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800',
+                      ]"
+                    >
+                      {{ islem.durum }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -184,8 +283,10 @@ export default {
       bekleyen_dosya: 0,
       onaylanan_dosya: 0,
       reddedilen_dosya: 0,
+      toplam_maddi_yardim: 0,
     });
     const navbarStore = useNavbarStore();
+    const sonIslemler = ref([]);
 
     const pieChartData = computed(() => ({
       labels: ["Beklemede", "Onaylandı", "Reddedildi"],
@@ -342,10 +443,39 @@ export default {
       },
     };
 
+    // Para formatı için yardımcı fonksiyon
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat("tr-TR").format(value);
+    };
+
+    // Tarih formatı için yardımcı fonksiyon
+    const formatDate = (date) => {
+      return new Date(date).toLocaleDateString("tr-TR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
     const fetchStats = async () => {
       try {
         const response = await apiService.getDosyaStats();
         stats.value = response.data;
+
+        // Maddi yardım toplamını getir
+        const yardimResponse = await apiService.getMaddiYardimlar();
+        const toplamYardim =
+          yardimResponse.data.results?.reduce(
+            (acc, curr) => acc + (curr.yardim_tutar || 0),
+            0
+          ) || 0;
+        stats.value.toplam_maddi_yardim = toplamYardim;
+
+        // Son işlemleri getir
+        const islemlerResponse = await apiService.getSonIslemler();
+        sonIslemler.value = islemlerResponse.data.slice(0, 10); // Son 10 işlemi al
       } catch (error) {
         console.error("İstatistikler yüklenirken hata oluştu:", error);
         stats.value = {
@@ -353,7 +483,9 @@ export default {
           bekleyen_dosya: 0,
           onaylanan_dosya: 0,
           reddedilen_dosya: 0,
+          toplam_maddi_yardim: 0,
         };
+        sonIslemler.value = [];
       }
     };
 
@@ -368,6 +500,9 @@ export default {
       pieChartOptions,
       barChartData,
       barChartOptions,
+      formatCurrency,
+      formatDate,
+      sonIslemler,
     };
   },
 };

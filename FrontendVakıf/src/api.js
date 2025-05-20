@@ -278,6 +278,95 @@ const apiService = {
   deleteMaddiYardim: (id) =>
     api.delete(`${apiService.endpoints.maddiYardim.base}${id}/`),
 
+  // Son İşlemler
+  getSonIslemler: async () => {
+    try {
+      const sonIslemler = [];
+
+      // Maddi yardımları getir
+      const yardimResponse = await api.get(
+        apiService.endpoints.maddiYardim.base
+      );
+      const yardimlar = yardimResponse.data.results || yardimResponse.data;
+
+      // Maddi yardımları son işlemlere ekle
+      yardimlar.forEach((yardim) => {
+        sonIslemler.push({
+          id: `yardim_${yardim.id}`,
+          islem_turu: "Maddi Yardım",
+          ad_soyad: yardim.yardim_yapan_ad_soyad,
+          tutar: yardim.yardim_tutar,
+          tarih: yardim.created_at,
+          durum: "Onaylandı",
+        });
+      });
+
+      // Şahsi yardımları getir
+      const sahsiYardimResponse = await api.get(
+        apiService.endpoints.sahsiYardim.base
+      );
+      const sahsiYardimlar =
+        sahsiYardimResponse.data.results || sahsiYardimResponse.data;
+
+      // Şahsi yardımları son işlemlere ekle
+      sahsiYardimlar.forEach((yardim) => {
+        sonIslemler.push({
+          id: `sahsi_${yardim.id}`,
+          islem_turu: "Şahsi Yardım",
+          ad_soyad: yardim.ad_soyad,
+          tutar: null,
+          tarih: yardim.created_at,
+          durum: "Onaylandı",
+        });
+      });
+
+      // Dosyaları getir
+      const dosyaResponse = await api.get(apiService.endpoints.dosyalar.base);
+      const dosyalar = dosyaResponse.data.results || dosyaResponse.data;
+
+      // Dosya kayıtlarını son işlemlere ekle
+      dosyalar.forEach((dosya) => {
+        sonIslemler.push({
+          id: `dosya_${dosya.id}`,
+          islem_turu: "Dosya Kaydı",
+          ad_soyad: dosya.ad_soyad,
+          tutar: null,
+          tarih: dosya.created_at,
+          durum: dosya.durum,
+        });
+      });
+
+      // Durum değişikliklerini getir
+      const durumDegisiklikleriResponse = await api.get(
+        apiService.endpoints.durumDegisiklikleri
+      );
+      const durumDegisiklikleri =
+        durumDegisiklikleriResponse.data.results ||
+        durumDegisiklikleriResponse.data;
+
+      // Durum değişikliklerini son işlemlere ekle
+      durumDegisiklikleri.forEach((degisiklik) => {
+        sonIslemler.push({
+          id: `durum_${degisiklik.id}`,
+          islem_turu: "Durum Değişikliği",
+          ad_soyad: degisiklik.degistiren_ad_soyad,
+          tutar: null,
+          tarih: degisiklik.tarih,
+          durum: degisiklik.yeni_durum,
+        });
+      });
+
+      // Tarihe göre sırala (en yeniden en eskiye)
+      sonIslemler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+
+      // İlk 10 işlemi döndür
+      return { data: sonIslemler.slice(0, 10) };
+    } catch (error) {
+      console.error("Son işlemler alınırken hata oluştu:", error);
+      throw error;
+    }
+  },
+
   // Şahsi Yardım API'leri
   getSahsiYardimlar: (params = {}) => {
     // Eğer tüm kayıtlar isteniyorsa
