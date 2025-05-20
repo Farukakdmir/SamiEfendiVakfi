@@ -148,7 +148,10 @@
                   v-if="searchResults.length > 0 && showResults"
                   class="mb-4"
                 >
-                  <v-list>
+                  <v-list
+                    class="search-results-list"
+                    style="max-height: 400px; overflow-y: auto"
+                  >
                     <v-list-item
                       v-for="dosya in filteredSearchResults"
                       :key="dosya.id"
@@ -384,6 +387,52 @@ export default {
     const manuelKayitlar = ref([]);
     const toplamTutar = ref(0);
 
+    // Form verilerini sıfırlama fonksiyonu
+    const resetForm = () => {
+      form.value = {
+        yardim_yapan_ad_soyad: "",
+        yardim_yapan_telefon: "",
+        yardim_tutar: 0,
+        tutar: 0,
+        aciklama: "",
+      };
+      dosyalar.value = [];
+      dosyaTutarlari.value = {};
+      manuelKayitlar.value = [];
+      toplamTutar.value = 0;
+      searchQuery.value = "";
+      searchResults.value = [];
+      showResults.value = false;
+      showManualEntry.value = false;
+      manualEntry.value = {
+        ad_soyad: "",
+        tc_kimlik: "",
+        telefon: "",
+        adres: "",
+        tutar: 0,
+        aciklama: "",
+      };
+    };
+
+    // Modal açıldığında
+    watch(
+      () => props.show,
+      (newVal) => {
+        dialog.value = newVal;
+        if (newVal) {
+          resetForm();
+        }
+      }
+    );
+
+    // Modal kapatıldığında
+    watch(dialog, (newVal) => {
+      if (!newVal) {
+        emit("close");
+        resetForm();
+      }
+    });
+
     // Manuel kayıt ekleme
     const addManualEntry = () => {
       if (
@@ -500,34 +549,46 @@ export default {
       try {
         loading.value = true;
 
+        // Form verilerini kontrol et
+        if (
+          !form.value.yardim_yapan_ad_soyad ||
+          !form.value.yardim_yapan_telefon
+        ) {
+          throw new Error("Yardım yapan kişi bilgileri zorunludur");
+        }
+
         // Dosya tutarlarını hazırla
-        const dosyaTutarlariList = Object.entries(dosyaTutarlari.value).map(
-          ([dosyaId, tutar]) => ({
-            dosya: Number(dosyaId),
+        const dosyaTutarlariList = Object.entries(dosyaTutarlari.value)
+          .filter(([_, tutar]) => tutar > 0)
+          .map(([dosyaId, tutar]) => ({
+            dosya: parseInt(dosyaId),
             tutar: Number(tutar),
-          })
-        );
+          }));
 
         // Manuel kayıtları hazırla
-        const manuelKayitlarList = manuelKayitlar.value.map((kayit) => ({
-          ad_soyad: kayit.ad_soyad,
-          tc_kimlik: kayit.tc_kimlik,
-          telefon: kayit.telefon,
-          adres: kayit.adres,
-          tutar: Number(kayit.tutar),
-          aciklama: kayit.aciklama,
-        }));
+        const manuelKayitlarList = manuelKayitlar.value
+          .filter((kayit) => kayit.tutar > 0)
+          .map((kayit) => ({
+            ad_soyad: kayit.ad_soyad,
+            tc_kimlik: kayit.tc_kimlik,
+            telefon: kayit.telefon,
+            adres: kayit.adres,
+            tutar: Number(kayit.tutar),
+            aciklama: kayit.aciklama || "",
+          }));
 
         // Form verilerini hazırla
         const formData = {
           yardim_yapan_ad_soyad: form.value.yardim_yapan_ad_soyad,
           yardim_yapan_telefon: form.value.yardim_yapan_telefon,
-          yardim_tutar: Number(form.value.yardim_tutar),
-          tutar: toplamTutar.value,
+          yardim_tutar: Number(form.value.yardim_tutar) || 0,
+          tutar: Number(toplamTutar.value) || 0,
           aciklama: form.value.aciklama || "",
           dosya_tutarlari_list: dosyaTutarlariList,
           manuel_kayitlar_list: manuelKayitlarList,
         };
+
+        console.log("Gönderilen veri:", formData);
 
         // API'ye gönder
         const response = await apiService.createMaddiYardim(formData);
@@ -538,52 +599,18 @@ export default {
         // Modalı kapat ve güncel veriyi gönder
         dialog.value = false;
         emit("saved", response.data);
+        resetForm();
       } catch (error) {
         console.error("Kaydetme hatası:", error);
-        alert("Kaydetme sırasında bir hata oluştu");
+        console.error("Hata detayı:", error.response?.data);
+        alert(
+          "Kaydetme sırasında bir hata oluştu: " +
+            (error.response?.data?.detail || error.message)
+        );
       } finally {
         loading.value = false;
       }
     };
-
-    // Modal açıldığında
-    watch(
-      () => props.show,
-      (newVal) => {
-        dialog.value = newVal;
-      }
-    );
-
-    // Modal kapatıldığında form verilerini sıfırla
-    watch(dialog, (newVal) => {
-      if (!newVal) {
-        emit("close");
-        // Form verilerini sıfırla
-        form.value = {
-          yardim_yapan_ad_soyad: "",
-          yardim_yapan_telefon: "",
-          yardim_tutar: 0,
-          tutar: 0,
-          aciklama: "",
-        };
-        dosyalar.value = [];
-        dosyaTutarlari.value = {};
-        manuelKayitlar.value = [];
-        toplamTutar.value = 0;
-        searchQuery.value = "";
-        searchResults.value = [];
-        showResults.value = false;
-        showManualEntry.value = false;
-        manualEntry.value = {
-          ad_soyad: "",
-          tc_kimlik: "",
-          telefon: "",
-          adres: "",
-          tutar: 0,
-          aciklama: "",
-        };
-      }
-    });
 
     // Dosya detayını göster
     const openDosyaDetay = (dosya) => {
@@ -628,6 +655,7 @@ export default {
       removeAile,
       addManualEntry,
       removeManuelKayit,
+      resetForm,
     };
   },
 };
@@ -690,5 +718,28 @@ export default {
     .v-data-table__empty-wrapper
   ) {
   background-color: transparent !important;
+}
+
+.search-results-list {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-results-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style>

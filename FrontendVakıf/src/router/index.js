@@ -70,18 +70,14 @@ const router = createRouter({
 
 // Kullanıcı kimlik doğrulaması kontrolü
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem("token"); // Token kontrolü
-  console.log("Auth durumu:", isAuthenticated);
+  const isAuthenticated = localStorage.getItem("token");
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    console.log("Yetkisiz erişim, login sayfasına yönlendiriliyor");
-    next({ name: "login" }); // Giriş yapılmamışsa login sayfasına yönlendir
-  } else if (to.meta.requiresGuest && isAuthenticated) {
-    console.log("Zaten giriş yapılmış, ana sayfaya yönlendiriliyor");
-    next({ name: "home" }); // Zaten giriş yapmışsa ana sayfaya yönlendir
+  if (to.path === "/login" && isAuthenticated) {
+    next("/files");
+  } else if (to.path !== "/login" && !isAuthenticated) {
+    next("/login");
   } else {
-    console.log("Normal yönlendirme:", to.path);
-    next(); // Diğer durumlarda yönlendirmeye devam et
+    next();
   }
 });
 

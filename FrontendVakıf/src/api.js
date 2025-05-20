@@ -263,7 +263,10 @@ const apiService = {
   // Dosya Arama
   searchDosyalar: (query) => {
     return api.get(`${apiService.endpoints.dosyalar.base}`, {
-      params: { search: query },
+      params: {
+        search: query,
+        page_size: 10000, // Tüm sonuçları getir
+      },
     });
   },
 
@@ -320,7 +323,7 @@ const apiService = {
         });
       });
 
-      // Dosyaları getir
+      // Aktif dosyaları getir
       const dosyaResponse = await api.get(apiService.endpoints.dosyalar.base);
       const dosyalar = dosyaResponse.data.results || dosyaResponse.data;
 
@@ -328,11 +331,32 @@ const apiService = {
       dosyalar.forEach((dosya) => {
         sonIslemler.push({
           id: `dosya_${dosya.id}`,
-          islem_turu: "Dosya Kaydı",
+          islem_turu: "Dosya Kayıt",
+          dosya_no: dosya.dosya_no,
           ad_soyad: dosya.ad_soyad,
           tutar: null,
           tarih: dosya.created_at,
           durum: dosya.durum,
+        });
+      });
+
+      // Silinen dosyaları getir
+      const silinenDosyaResponse = await api.get(
+        apiService.endpoints.deletedDosyalar
+      );
+      const silinenDosyalar =
+        silinenDosyaResponse.data.results || silinenDosyaResponse.data;
+
+      // Silinen dosyaları son işlemlere ekle
+      silinenDosyalar.forEach((dosya) => {
+        sonIslemler.push({
+          id: `silinen_${dosya.id}`,
+          islem_turu: "Dosya Silme",
+          dosya_no: dosya.dosya_no,
+          ad_soyad: dosya.ad_soyad,
+          tutar: null,
+          tarih: dosya.deleted_at || dosya.updated_at,
+          durum: "Silindi",
         });
       });
 
@@ -359,8 +383,7 @@ const apiService = {
       // Tarihe göre sırala (en yeniden en eskiye)
       sonIslemler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
 
-      // İlk 10 işlemi döndür
-      return { data: sonIslemler.slice(0, 10) };
+      return { data: sonIslemler };
     } catch (error) {
       console.error("Son işlemler alınırken hata oluştu:", error);
       throw error;

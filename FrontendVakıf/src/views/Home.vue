@@ -147,7 +147,7 @@
         </div>
 
         <!-- Grafikler -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
           <!-- Dairesel Grafik -->
           <div class="bg-white shadow-lg rounded-lg p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">
@@ -171,7 +171,9 @@
 
         <!-- Son İşlemler Widget -->
         <div class="bg-white shadow-lg rounded-lg p-6 mb-8">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">Son 10 İşlem</h3>
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            Son 10 Yardım İşlemi
+          </h3>
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
@@ -216,7 +218,7 @@
                     {{ islem.ad_soyad }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {{ formatCurrency(islem.tutar) }} ₺
+                    {{ islem.tutar ? formatCurrency(islem.tutar) + " ₺" : "-" }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {{ formatDate(islem.tarih) }}
@@ -227,9 +229,7 @@
                         'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
                         islem.durum === 'Onaylandı'
                           ? 'bg-green-100 text-green-800'
-                          : islem.durum === 'Beklemede'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800',
+                          : 'bg-yellow-100 text-yellow-800',
                       ]"
                     >
                       {{ islem.durum }}
@@ -246,7 +246,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
 import Navbar from "../components/Navbar.vue";
 import apiService from "../api";
 import { useNavbarStore } from "../store/navbar";
@@ -450,13 +450,21 @@ export default {
 
     // Tarih formatı için yardımcı fonksiyon
     const formatDate = (date) => {
-      return new Date(date).toLocaleDateString("tr-TR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      if (!date) return "-";
+      try {
+        const dateObj = new Date(date);
+        if (isNaN(dateObj.getTime())) return "-";
+        return dateObj.toLocaleDateString("tr-TR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch (error) {
+        console.error("Tarih formatı hatası:", error);
+        return "-";
+      }
     };
 
     const fetchStats = async () => {
@@ -475,7 +483,16 @@ export default {
 
         // Son işlemleri getir
         const islemlerResponse = await apiService.getSonIslemler();
-        sonIslemler.value = islemlerResponse.data.slice(0, 10); // Son 10 işlemi al
+
+        // Sadece yardım işlemlerini filtrele
+        sonIslemler.value = islemlerResponse.data
+          .filter(
+            (islem) =>
+              islem.islem_turu === "Maddi Yardım" ||
+              islem.islem_turu === "Şahsi Yardım"
+          )
+          .sort((a, b) => new Date(b.tarih) - new Date(a.tarih))
+          .slice(0, 10);
       } catch (error) {
         console.error("İstatistikler yüklenirken hata oluştu:", error);
         stats.value = {
@@ -489,8 +506,11 @@ export default {
       }
     };
 
+    // Sayfa yüklendiğinde ve her 30 saniyede bir verileri güncelle
     onMounted(() => {
       fetchStats();
+      const interval = setInterval(fetchStats, 30000);
+      onUnmounted(() => clearInterval(interval));
     });
 
     return {

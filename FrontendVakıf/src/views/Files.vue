@@ -369,9 +369,23 @@
                     Dosya No
                   </th>
                   <th
-                    class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                    class="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap cursor-pointer"
+                    @click="toggleSort"
                   >
-                    Kayıt Tarihi
+                    <div class="flex items-center gap-1">
+                      Kayıt Tarihi
+                      <v-icon
+                        :icon="
+                          sortOrder === '-kayit_tarihi'
+                            ? 'mdi-arrow-down'
+                            : 'mdi-arrow-up'
+                        "
+                        size="small"
+                        :color="
+                          sortOrder === '-kayit_tarihi' ? 'primary' : 'primary'
+                        "
+                      ></v-icon>
+                    </div>
                   </th>
                   <th
                     class="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
@@ -634,6 +648,7 @@ export default {
     const selectedYardimTipi = ref("");
     const showNoResults = ref(false);
     const error = ref(null);
+    const sortOrder = ref("-kayit_tarihi"); // Varsayılan sıralama
 
     const totalPages = computed(() => {
       return Math.ceil(totalItems.value / itemsPerPage.value);
@@ -763,6 +778,12 @@ export default {
       loadDosyalar();
     };
 
+    const toggleSort = () => {
+      sortOrder.value =
+        sortOrder.value === "-kayit_tarihi" ? "kayit_tarihi" : "-kayit_tarihi";
+      loadDosyalar();
+    };
+
     const loadDosyalar = async () => {
       try {
         isLoading.value = true;
@@ -770,6 +791,7 @@ export default {
         const params = new URLSearchParams();
         params.append("page", currentPage.value);
         params.append("page_size", itemsPerPage.value);
+        params.append("ordering", sortOrder.value);
 
         // Arama filtresi - trim ve boşluk kontrolü ekle
         if (searchQuery.value && searchQuery.value.trim()) {
@@ -806,16 +828,13 @@ export default {
           params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
         }
 
-        console.log("Search params:", params.toString());
-
         // Dosya verilerini al
         const response = await apiService.get(
           `/dosyalar/?${params.toString()}`
         );
-        console.log("API Response:", response.data);
 
         if (!response.data || !response.data.results) {
-          console.error("Invalid response format:", response.data);
+          error.value = "Dosyalar yüklenirken bir hata oluştu.";
           dosyalar.value = [];
           totalItems.value = 0;
           return;
@@ -838,10 +857,16 @@ export default {
           };
         });
 
-        console.log("Processed dosyalar:", dosyalar.value);
-
         // Toplam kayıt sayısını güncelle
         totalItems.value = response.data.count || 0;
+
+        // Arama yapıldığında sayfalamayı devre dışı bırak
+        if (searchQuery.value && searchQuery.value.trim()) {
+          currentPage.value = 1;
+          itemsPerPage.value = totalItems.value;
+        } else {
+          itemsPerPage.value = 10; // Normal sayfa boyutuna geri dön
+        }
 
         // Filtreleme yapıldıysa ve sonuç yoksa
         if (
@@ -860,7 +885,6 @@ export default {
         }
       } catch (error) {
         console.error("Dosyalar yüklenirken hata:", error);
-        console.error("Hata detayı:", error.response?.data);
         error.value = "Dosyalar yüklenirken bir hata oluştu.";
         dosyalar.value = [];
         totalItems.value = 0;
@@ -901,8 +925,7 @@ export default {
     );
 
     // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
-    watch(searchQuery, (newValue) => {
-      console.log("Search query changed:", newValue);
+    watch(searchQuery, () => {
       debouncedLoadDosyalar();
     });
 
@@ -1168,6 +1191,8 @@ export default {
       showNoResults,
       error,
       handleSearch,
+      toggleSort,
+      sortOrder,
     };
   },
 };

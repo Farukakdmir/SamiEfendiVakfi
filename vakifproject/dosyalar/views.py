@@ -25,7 +25,7 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 100
     page_size_query_param = 'page_size'
     max_page_size = 10000  # Maksimum sayfa boyutunu artırdık
 
@@ -47,6 +47,7 @@ class DosyaViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['ad', 'soyad', 'kimlik_no', 'dosya_no', 'mahalle', 'cadde_sokak']
     ordering_fields = ['kayit_tarihi', 'ad', 'soyad', 'dosya_no']
+    ordering = ['-kayit_tarihi']  # Varsayılan sıralama
     pagination_class = StandardResultsSetPagination
     
     def get_serializer_class(self):
@@ -60,6 +61,11 @@ class DosyaViewSet(viewsets.ModelViewSet):
             
             # Debug: Gelen parametreleri logla
             logger.info("Query params: %s", self.request.query_params)
+            
+            # Sıralama parametresi
+            ordering = self.request.query_params.get('ordering', '-kayit_tarihi')
+            if ordering:
+                queryset = queryset.order_by(ordering)
             
             # Durum filtresi
             status = self.request.query_params.get('status')
@@ -119,15 +125,25 @@ class DosyaViewSet(viewsets.ModelViewSet):
             # Debug: SQL sorgusunu logla
             logger.info("SQL query: %s", str(queryset.query))
             
-            return queryset.order_by('dosya_no')
+            return queryset
         except Exception as e:
             logger.error("get_queryset'de hata: %s", str(e))
             raise
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)
         
+        # Arama yapıldığında sayfalamayı devre dışı bırak
+        search = request.query_params.get('search', '')
+        if search:
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'count': queryset.count(),
+                'results': serializer.data
+            })
+        
+        # Normal sayfalama
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)

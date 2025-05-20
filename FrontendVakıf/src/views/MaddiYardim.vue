@@ -392,7 +392,7 @@ export default {
 
     // Sayfalama için state
     const currentPage = ref(1);
-    const pageSize = ref(10);
+    const pageSize = ref(100);
     const totalItems = ref(0);
     const totalPages = computed(() =>
       Math.ceil(totalItems.value / pageSize.value)

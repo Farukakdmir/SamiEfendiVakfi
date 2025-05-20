@@ -4,6 +4,7 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import App from "./App.vue";
 import router from "./router";
 import "./assets/tailwind.css";
+import apiService from "./api";
 
 // Vuetify
 import "vuetify/styles";
