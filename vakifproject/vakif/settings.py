@@ -133,6 +133,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://samiefendivakfi.netlify.app",
+    "https://vakif-backend.onrender.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -159,11 +160,20 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Production CORS ayarları
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 saat
+
 # Güvenlik ayarları
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
+if 'RENDER' in os.environ:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # REST Framework settings
 REST_FRAMEWORK = {
