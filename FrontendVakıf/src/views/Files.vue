@@ -426,7 +426,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr
-                  v-for="dosya in filteredDosyalar"
+                  v-for="dosya in dosyalar"
                   :key="dosya.dosya_no"
                   class="hover:bg-gray-50"
                 >
@@ -658,247 +658,19 @@ export default {
 
     const displayedPages = computed(() => {
       const pages = [];
-      const maxVisiblePages = 5;
-
-      if (totalPages.value <= maxVisiblePages) {
-        for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i);
-        }
-      } else {
-        pages.push(1);
-
-        const start = Math.max(2, currentPage.value - 1);
-        const end = Math.min(totalPages.value - 1, currentPage.value + 1);
-
-        if (start > 2) {
-          pages.push("...");
-        }
-
-        for (let i = start; i <= end; i++) {
-          pages.push(i);
-        }
-
-        if (end < totalPages.value - 1) {
-          pages.push("...");
-        }
-
-        pages.push(totalPages.value);
+      const maxPages = 5;
+      let start = Math.max(1, currentPage.value - Math.floor(maxPages / 2));
+      let end = Math.min(totalPages.value, start + maxPages - 1);
+      if (end - start + 1 < maxPages) {
+        start = Math.max(1, end - maxPages + 1);
       }
-
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
       return pages;
     });
 
-    const filteredDosyalar = computed(() => {
-      if (!searchQuery.value) return dosyalar.value;
-      const query = searchQuery.value.toLowerCase();
-      return dosyalar.value.filter((dosya) => {
-        // String değerleri kontrol et
-        const ad = (dosya.ad || "").toString().toLowerCase();
-        const soyad = (dosya.soyad || "").toString().toLowerCase();
-        const adres = (dosya.adres || "").toString().toLowerCase();
-
-        // Sayısal değerleri string'e çevir
-        const dosyaNo = (dosya.dosya_no || "").toString();
-        const kimlikNo = (dosya.kimlik_no || "").toString();
-
-        return (
-          ad.includes(query) ||
-          soyad.includes(query) ||
-          dosyaNo.includes(query) ||
-          kimlikNo.includes(query) ||
-          adres.includes(query)
-        );
-      });
-    });
-
-    // Yardım tipini al
-    const getYardimTipi = (dosya) => {
-      const yardim = sahsiYardimStore.getYardimByDosyaNo(dosya.id);
-      if (
-        yardim &&
-        (yardim.yardim_tipi === "individual" || yardim.yardim_tipi === "group")
-      ) {
-        return yardim.yardim_tipi;
-      }
-      return null;
-    };
-
-    // Yardım tipi metnini al
-    const getYardimTipiText = (dosya) => {
-      const tip = getYardimTipi(dosya);
-      if (tip === "individual") {
-        return "Bireysel Yardım";
-      } else if (tip === "group") {
-        return "Grup Yardımı";
-      }
-      return "";
-    };
-
-    // Durum sınıfını al
-    const getStatusClass = (status) => {
-      const statusClasses = {
-        BEKLEMEDE: "bg-yellow-100 text-yellow-800",
-        ONAYLANDI: "bg-green-100 text-green-800",
-        REDDEDILDI: "bg-red-100 text-red-800",
-      };
-      return statusClasses[status] || "bg-gray-100 text-gray-800";
-    };
-
-    // Engel durumu metnini al
-    const getEngelDurumuText = (dosya) => {
-      if (!dosya.aile_bilgileri || dosya.aile_bilgileri.length === 0) {
-        return dosya.engel_durumu
-          ? "Aile Engel Durumu Var"
-          : "Aile Engel Durumu Yok";
-      }
-
-      const engelliCount = dosya.aile_bilgileri.filter(
-        (member) => member.engel_durumu
-      ).length;
-      const hasEngelli = engelliCount > 0 || dosya.engel_durumu;
-
-      return hasEngelli
-        ? `Aile Engel Durumu Var (${
-            engelliCount + (dosya.engel_durumu ? 1 : 0)
-          } kişi)`
-        : "Aile Engel Durumu Yok";
-    };
-
-    // Filtreleri temizle
-    const clearFilters = () => {
-      selectedStatus.value = "";
-      selectedKiraDurumu.value = "";
-      selectedEngelDurumu.value = "";
-      selectedYardimTipi.value = "";
-      minAileUyesiSayisi.value = null;
-      maxAileUyesiSayisi.value = null;
-    };
-
-    // Arama sorgusunu temizle
-    const clearSearch = () => {
-      searchQuery.value = "";
-    };
-
-    const handleSearch = () => {
-      currentPage.value = 1;
-      loadDosyalar();
-    };
-
-    const toggleSort = () => {
-      if (sortOrder.value === "dosya_no") {
-        sortOrder.value = "-kayit_tarihi";
-      } else if (sortOrder.value === "-kayit_tarihi") {
-        sortOrder.value = "kayit_tarihi";
-      } else {
-        sortOrder.value = "-kayit_tarihi";
-      }
-      loadDosyalar();
-    };
-
-    const loadDosyalar = async () => {
-      try {
-        isLoading.value = true;
-        error.value = null;
-        const params = new URLSearchParams();
-        params.append("page", currentPage.value);
-        params.append("page_size", itemsPerPage.value);
-        params.append("ordering", sortOrder.value);
-
-        // Arama filtresi - trim ve boşluk kontrolü ekle
-        if (searchQuery.value && searchQuery.value.trim()) {
-          params.append("search", searchQuery.value.trim());
-        }
-
-        // Durum filtresi
-        if (selectedStatus.value) {
-          params.append("status", selectedStatus.value);
-        }
-
-        // Kira durumu filtresi
-        if (selectedKiraDurumu.value) {
-          params.append("kira_durumu", selectedKiraDurumu.value);
-        }
-
-        // Engel durumu filtresi
-        if (selectedEngelDurumu.value === "engelli") {
-          params.append("engel_durumu", "true");
-        } else if (selectedEngelDurumu.value === "engelli_degil") {
-          params.append("engel_durumu", "false");
-        }
-
-        // Aile üyesi sayısı filtresi
-        if (minAileUyesiSayisi.value) {
-          params.append("min_aile_uyesi_sayisi", minAileUyesiSayisi.value);
-        }
-        if (maxAileUyesiSayisi.value) {
-          params.append("max_aile_uyesi_sayisi", maxAileUyesiSayisi.value);
-        }
-
-        // Yardım tipi filtresi
-        if (selectedYardimTipi.value) {
-          params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
-        }
-
-        // Dosya verilerini al
-        const response = await apiService.get(
-          `/dosyalar/?${params.toString()}`
-        );
-
-        if (!response.data || !response.data.results) {
-          error.value = "Dosyalar yüklenirken bir hata oluştu.";
-          dosyalar.value = [];
-          totalItems.value = 0;
-          return;
-        }
-
-        const dosyaData = response.data.results;
-
-        // Dosya verilerini işle ve yardım tipini ekle
-        dosyalar.value = dosyaData.map((dosya) => {
-          const yardim = sahsiYardimStore.getYardimByDosyaNo(dosya.id);
-          return {
-            ...dosya,
-            yardim_tipi: yardim ? yardim.yardim_tipi : null,
-          };
-        });
-
-        // Toplam kayıt sayısını güncelle
-        totalItems.value = response.data.count || 0;
-
-        // Arama yapıldığında sayfalamayı devre dışı bırak
-        if (searchQuery.value && searchQuery.value.trim()) {
-          currentPage.value = 1;
-          itemsPerPage.value = totalItems.value;
-        } else {
-          itemsPerPage.value = 10; // Normal sayfa boyutuna geri dön
-        }
-
-        // Filtreleme yapıldıysa ve sonuç yoksa
-        if (
-          totalItems.value === 0 &&
-          (searchQuery.value ||
-            selectedStatus.value ||
-            selectedKiraDurumu.value ||
-            selectedEngelDurumu.value ||
-            minAileUyesiSayisi.value ||
-            maxAileUyesiSayisi.value ||
-            selectedYardimTipi.value)
-        ) {
-          showNoResults.value = true;
-        } else {
-          showNoResults.value = false;
-        }
-      } catch (error) {
-        console.error("Dosyalar yüklenirken hata:", error);
-        error.value = "Dosyalar yüklenirken bir hata oluştu.";
-        dosyalar.value = [];
-        totalItems.value = 0;
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    // Debounce fonksiyonu ekle
+    // Debounce fonksiyonunu geri getir
     const debounce = (fn, delay) => {
       let timeoutId;
       return (...args) => {
@@ -911,17 +683,22 @@ export default {
     const debouncedLoadDosyalar = debounce(() => {
       currentPage.value = 1; // Arama yapıldığında ilk sayfaya dön
       loadDosyalar();
-    }, 300);
+    }, 500); // 500ms gecikme ekledim
 
-    // Filtreler değiştiğinde dosyaları yeniden yükle
+    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
+    watch(searchQuery, () => {
+      debouncedLoadDosyalar();
+    });
+
+    // Diğer filtreler değiştiğinde loadDosyalar'ı çağır
     watch(
       [
         selectedStatus,
         selectedKiraDurumu,
         selectedEngelDurumu,
-        selectedYardimTipi,
         minAileUyesiSayisi,
         maxAileUyesiSayisi,
+        selectedYardimTipi,
       ],
       () => {
         currentPage.value = 1; // Filtre değiştiğinde ilk sayfaya dön
@@ -929,15 +706,70 @@ export default {
       }
     );
 
-    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
-    watch(searchQuery, () => {
-      debouncedLoadDosyalar();
-    });
-
-    // Sayfa değiştiğinde dosyaları yeniden yükle
+    // Sayfa değiştiğinde loadDosyalar'ı çağır
     watch(currentPage, () => {
       loadDosyalar();
     });
+
+    // Sıralama değiştiğinde loadDosyalar'ı çağır
+    watch(sortOrder, () => {
+      loadDosyalar();
+    });
+
+    // loadDosyalar fonksiyonunu güncelle
+    const loadDosyalar = async () => {
+      try {
+        isLoading.value = true;
+        error.value = null;
+        const params = new URLSearchParams();
+        params.append("page", currentPage.value);
+        params.append("page_size", itemsPerPage.value);
+        params.append("ordering", sortOrder.value);
+
+        // Arama filtresi
+        if (searchQuery.value && searchQuery.value.trim()) {
+          params.append("search", searchQuery.value.trim());
+        }
+
+        // Diğer filtreler
+        if (selectedStatus.value) params.append("status", selectedStatus.value);
+        if (selectedKiraDurumu.value)
+          params.append("kira_durumu", selectedKiraDurumu.value);
+        if (selectedEngelDurumu.value === "engelli") {
+          params.append("engel_durumu", "true");
+        } else if (selectedEngelDurumu.value === "engelli_degil") {
+          params.append("engel_durumu", "false");
+        }
+        if (minAileUyesiSayisi.value)
+          params.append("min_aile_uyesi_sayisi", minAileUyesiSayisi.value);
+        if (maxAileUyesiSayisi.value)
+          params.append("max_aile_uyesi_sayisi", maxAileUyesiSayisi.value);
+        if (selectedYardimTipi.value)
+          params.append("sahsi_yardim_tipi", selectedYardimTipi.value);
+
+        // API çağrısı
+        const response = await apiService.get(
+          `/dosyalar/?${params.toString()}`
+        );
+
+        if (response.data && response.data.results) {
+          dosyalar.value = response.data.results;
+          totalItems.value = response.data.count || 0;
+          showNoResults.value = dosyalar.value.length === 0;
+        } else {
+          error.value = "Dosyalar yüklenirken bir hata oluştu.";
+          dosyalar.value = [];
+          totalItems.value = 0;
+        }
+      } catch (error) {
+        console.error("Dosyalar yüklenirken hata:", error);
+        error.value = "Dosyalar yüklenirken bir hata oluştu.";
+        dosyalar.value = [];
+        totalItems.value = 0;
+      } finally {
+        isLoading.value = false;
+      }
+    };
 
     // Sayfa yüklendiğinde verileri getir
     onMounted(async () => {
@@ -1147,6 +979,90 @@ export default {
       editMode.value = false;
     };
 
+    // Yardım tipini al
+    const getYardimTipi = (dosya) => {
+      const yardim = sahsiYardimStore.getYardimByDosyaNo(dosya.id);
+      if (
+        yardim &&
+        (yardim.yardim_tipi === "individual" || yardim.yardim_tipi === "group")
+      ) {
+        return yardim.yardim_tipi;
+      }
+      return null;
+    };
+
+    // Yardım tipi metnini al
+    const getYardimTipiText = (dosya) => {
+      const tip = getYardimTipi(dosya);
+      if (tip === "individual") {
+        return "Bireysel Yardım";
+      } else if (tip === "group") {
+        return "Grup Yardımı";
+      }
+      return "";
+    };
+
+    // Durum sınıfını al
+    const getStatusClass = (status) => {
+      const statusClasses = {
+        BEKLEMEDE: "bg-yellow-100 text-yellow-800",
+        ONAYLANDI: "bg-green-100 text-green-800",
+        REDDEDILDI: "bg-red-100 text-red-800",
+      };
+      return statusClasses[status] || "bg-gray-100 text-gray-800";
+    };
+
+    // Engel durumu metnini al
+    const getEngelDurumuText = (dosya) => {
+      if (!dosya.aile_bilgileri || dosya.aile_bilgileri.length === 0) {
+        return dosya.engel_durumu
+          ? "Aile Engel Durumu Var"
+          : "Aile Engel Durumu Yok";
+      }
+
+      const engelliCount = dosya.aile_bilgileri.filter(
+        (member) => member.engel_durumu
+      ).length;
+      const hasEngelli = engelliCount > 0 || dosya.engel_durumu;
+
+      return hasEngelli
+        ? `Aile Engel Durumu Var (${
+            engelliCount + (dosya.engel_durumu ? 1 : 0)
+          } kişi)`
+        : "Aile Engel Durumu Yok";
+    };
+
+    // Filtreleri temizle
+    const clearFilters = () => {
+      selectedStatus.value = "";
+      selectedKiraDurumu.value = "";
+      selectedEngelDurumu.value = "";
+      selectedYardimTipi.value = "";
+      minAileUyesiSayisi.value = null;
+      maxAileUyesiSayisi.value = null;
+    };
+
+    // Arama sorgusunu temizle
+    const clearSearch = () => {
+      searchQuery.value = "";
+    };
+
+    const handleSearch = () => {
+      currentPage.value = 1;
+      loadDosyalar();
+    };
+
+    const toggleSort = () => {
+      if (sortOrder.value === "dosya_no") {
+        sortOrder.value = "-kayit_tarihi";
+      } else if (sortOrder.value === "-kayit_tarihi") {
+        sortOrder.value = "kayit_tarihi";
+      } else {
+        sortOrder.value = "-kayit_tarihi";
+      }
+      loadDosyalar();
+    };
+
     return {
       dosyalar,
       showModal,
@@ -1174,7 +1090,6 @@ export default {
       DURUM_CHOICES,
       printDosya: printDosyaHandler,
       exportToExcel,
-      filteredDosyalar,
       currentPage,
       totalPages,
       displayedPages,

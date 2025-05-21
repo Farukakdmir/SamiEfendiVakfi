@@ -140,7 +140,7 @@
                   v-model="formData.ilce"
                   label="İlçe"
                   variant="outlined"
-                  value="Yeni Mahalle"
+                  value="YeniMahalle"
                   readonly
                 ></v-text-field>
               </v-col>
@@ -557,6 +557,10 @@ export default {
     const canvasRef = ref(null);
     const previewImage = ref(null);
 
+    const valid = ref(false);
+    const form = ref(null);
+    const loading = ref(false);
+
     const initialFormData = {
       dosya_no: null,
       kayit_tarihi: new Date().toISOString().split("T")[0],
@@ -590,6 +594,18 @@ export default {
     };
 
     const formData = ref({ ...initialFormData });
+
+    // formData değişince validasyonu tetikle
+    watch(
+      formData,
+      async () => {
+        await nextTick();
+        if (form.value) {
+          form.value.validate();
+        }
+      },
+      { deep: true }
+    );
 
     const getBelgeAciklama = (belgeType) => {
       const aciklamalar = {
@@ -1145,6 +1161,9 @@ export default {
       handleKimlikNoInput,
       handleTelefonInput,
       handleIbanInput,
+      valid,
+      form,
+      loading,
     };
   },
 };

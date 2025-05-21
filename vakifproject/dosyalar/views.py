@@ -59,8 +59,17 @@ class DosyaViewSet(viewsets.ModelViewSet):
         try:
             queryset = Dosya.objects.select_related().filter(is_deleted=False)
             
-            # Debug: Gelen parametreleri logla
-            logger.info("Query params: %s", self.request.query_params)
+            # Arama parametresi
+            search = self.request.query_params.get('search', None)
+            if search:
+                queryset = queryset.filter(
+                    Q(ad__icontains=search) |
+                    Q(soyad__icontains=search) |
+                    Q(dosya_no__icontains=search) |
+                    Q(kimlik_no__icontains=search) |
+                    Q(mahalle__icontains=search) |
+                    Q(cadde_sokak__icontains=search)
+                ).distinct()
             
             # Sıralama parametresi
             ordering = self.request.query_params.get('ordering', '-kayit_tarihi')
@@ -80,22 +89,17 @@ class DosyaViewSet(viewsets.ModelViewSet):
             # Engel durumu filtresi
             engel_durumu = self.request.query_params.get('engel_durumu')
             if engel_durumu:
-                logger.info("Engel durumu filtresi: %s", engel_durumu)
                 try:
                     if engel_durumu.lower() == 'true':
-                        # Ana başvuru sahibi veya aile üyelerinden herhangi birinin engel durumu varsa getir
                         queryset = queryset.filter(
                             Q(engel_durumu=True) | 
                             Q(aile_bilgileri__engel_durumu=True)
                         ).distinct()
-                        logger.info("Engelli filtrelemesi yapıldı")
                     elif engel_durumu.lower() == 'false':
-                        # Ne ana başvuru sahibinin ne de aile üyelerinin engel durumu yoksa getir
                         queryset = queryset.filter(
                             Q(engel_durumu=False) & 
                             ~Q(aile_bilgileri__engel_durumu=True)
                         )
-                        logger.info("Engelli olmayan filtrelemesi yapıldı")
                 except Exception as e:
                     logger.error("Engel durumu filtrelemesinde hata: %s", str(e))
                     raise
@@ -133,16 +137,7 @@ class DosyaViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         
-        # Arama yapıldığında sayfalamayı devre dışı bırak
-        search = request.query_params.get('search', '')
-        if search:
-            serializer = self.get_serializer(queryset, many=True)
-            return Response({
-                'count': queryset.count(),
-                'results': serializer.data
-            })
-        
-        # Normal sayfalama
+        # Her durumda sayfalama yap
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
