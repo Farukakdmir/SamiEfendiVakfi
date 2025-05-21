@@ -1,669 +1,531 @@
 <template>
-  <div
-    v-if="showModal"
-    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[200]"
-    @click.self="$emit('close')"
+  <v-dialog
+    :model-value="showModal"
+    @update:model-value="$emit('update:showModal', $event)"
+    max-width="1200px"
+    transition="dialog-bottom-transition"
   >
-    <div class="flex items-center justify-center min-h-screen">
-      <div
-        class="relative bg-white w-[1200px] shadow-lg rounded-md p-8 max-h-[90vh] overflow-y-auto z-[201]"
-      >
-        <div class="mt-3">
-          <h3 class="text-2xl font-bold text-gray-900 mb-4">
-            {{ editMode ? "Dosya Düzenle" : "Yeni Dosya Ekle" }}
-          </h3>
-          <button
-            @click="$emit('close')"
-            class="fixed top-4 right-4 text-gray-500 hover:text-gray-700 bg-white rounded-full p-2 shadow-lg hover:shadow-xl z-[103]"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <form @submit.prevent="handleSubmit">
-            <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-              <div class="grid grid-cols-4 gap-4 bg-gray-50 p-4 rounded">
-                <div class="col-span-4 mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >Profil Resmi</label
-                  >
-                  <div class="flex flex-col items-center space-y-4">
-                    <div
-                      v-if="formData.profil_resmi_preview"
-                      class="relative w-32 h-32"
-                    >
-                      <img
-                        :src="formData.profil_resmi_preview"
-                        class="w-32 h-32 object-cover rounded-lg"
-                        alt="Profil Resmi"
-                      />
-                      <button
-                        @click="removeProfileImage"
-                        class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none"
-                      >
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </div>
-                    <div class="flex space-x-4">
-                      <button
-                        type="button"
-                        @click="$refs.fileInput.click()"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <i class="fas fa-upload mr-2"></i>
-                        Dosyadan Yükle
-                      </button>
-                      <button
-                        type="button"
-                        @click="startCamera"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <i class="fas fa-camera mr-2"></i>
-                        Kameradan Çek
-                      </button>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png"
-                      @change="handleProfileImageChange"
-                      class="hidden"
-                      ref="fileInput"
-                    />
-                  </div>
-                </div>
-                <div class="mb-4" v-if="editMode">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Dosya No</label
-                  >
-                  <input
-                    v-model="formData.dosya_no"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    readonly
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Kayıt Tarihi</label
-                  >
-                  <input
-                    v-model="formData.kayit_tarihi"
-                    type="date"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2">Ad</label>
-                  <input
-                    v-model="formData.ad"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Soyad</label
-                  >
-                  <input
-                    v-model="formData.soyad"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Kimlik No</label
-                  >
-                  <input
-                    v-model="formData.kimlik_no"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                    pattern="[0-9]*"
-                    inputmode="numeric"
-                    @input="handleKimlikNoInput"
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Uyruk</label
-                  >
-                  <select
-                    v-model="formData.uyruk"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  >
-                    <option
-                      v-for="secenek in UYRUK_CHOICES"
-                      :key="secenek.value"
-                      :value="secenek.value"
-                    >
-                      {{ secenek.label }}
-                    </option>
-                  </select>
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Telefon</label
-                  >
-                  <input
-                    v-model="formData.telefon"
-                    type="tel"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                    pattern="[0-9]*"
-                    inputmode="numeric"
-                    maxlength="11"
-                    @input="handleTelefonInput"
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2">İlçe</label>
-                  <input
-                    v-model="formData.ilce"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    value="Yeni Mahalle"
-                    readonly
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Mahalle</label
-                  >
-                  <input
-                    v-model="formData.mahalle"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Cadde/Sokak</label
-                  >
-                  <input
-                    v-model="formData.cadde_sokak"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Bina No</label
-                  >
-                  <input
-                    v-model="formData.bina_no"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Daire No</label
-                  >
-                  <input
-                    v-model="formData.daire_no"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Kira Durumu</label
-                  >
-                  <select
-                    v-model="formData.kira_durumu"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  >
-                    <option value="EV_SAHIBI">Ev Sahibi</option>
-                    <option value="KIRACI">Kiracı</option>
-                  </select>
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Gelir Durumu (TL)</label
-                  >
-                  <input
-                    v-model="formData.gelir_durumu"
-                    type="number"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Dolduran Kişi</label
-                  >
-                  <input
-                    v-model="formData.dolduran_kisi"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    readonly
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2">IBAN</label>
-                  <input
-                    v-model="formData.iban"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                    @input="handleIbanInput"
-                  />
-                </div>
-                <div class="mb-4">
-                  <label class="block text-gray-700 font-bold mb-2"
-                    >Yardım Aldığı Yerler</label
-                  >
-                  <input
-                    v-model="formData.yardim_aldigi_yerler"
-                    type="text"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-              </div>
+    <v-card class="rounded-lg">
+      <v-card-title class="text-h5 bg-emerald-800 text-white pa-4">
+        <v-icon start icon="mdi-plus" class="mr-2"></v-icon>
+        {{ editMode ? "Dosya Düzenle" : "Yeni Dosya Ekle" }}
+      </v-card-title>
 
-              <div class="mt-6">
-                <h4 class="text-xl font-bold mb-4">İstenen Belgeler</h4>
-                <div class="grid grid-cols-2 gap-6">
-                  <div
-                    v-for="(belgeType, index) in Object.keys(formData.belgeler)"
-                    :key="index"
-                    class="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition-all duration-200"
-                  >
-                    <div class="flex items-center justify-between mb-2">
-                      <label class="block text-gray-700 font-bold">
-                        {{ getBelgeLabel(belgeType) }}
-                      </label>
-                      <div class="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          @click="triggerFileInput(belgeType)"
-                          class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors duration-200"
-                        >
-                          Yükle
-                        </button>
-                        <input
-                          type="file"
-                          :ref="(el) => (fileInputs[belgeType] = el)"
-                          @change="handleFileUpload($event, belgeType)"
-                          class="hidden"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          multiple
-                        />
-                      </div>
-                    </div>
-                    <p class="text-sm text-gray-600 mb-3">
-                      {{ getBelgeAciklama(belgeType) }}
-                    </p>
-                    <div
-                      v-if="formData.belgeler[belgeType]?.length"
-                      class="space-y-2"
-                    >
-                      <div
-                        v-for="(file, fileIndex) in formData.belgeler[
-                          belgeType
-                        ]"
-                        :key="fileIndex"
-                        class="flex items-center justify-between bg-white p-2 rounded border"
-                      >
-                        <div class="flex items-center space-x-2">
-                          <span class="text-sm text-gray-700 truncate">{{
-                            file.name
-                          }}</span>
-                          <div class="flex space-x-2">
-                            <a
-                              v-if="file.url && isImageFile(file.name)"
-                              @click.prevent="showPreview(file.url)"
-                              href="#"
-                              class="text-blue-500 hover:text-blue-700 cursor-pointer"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                <path
-                                  fill-rule="evenodd"
-                                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                                  clip-rule="evenodd"
-                                />
-                              </svg>
-                            </a>
-                            <a
-                              v-if="file.url"
-                              :href="file.url"
-                              target="_blank"
-                              class="text-blue-500 hover:text-blue-700"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path
-                                  fill-rule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
-                                  clip-rule="evenodd"
-                                />
-                              </svg>
-                            </a>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          @click="removeFile(belgeType, fileIndex)"
-                          class="text-red-500 hover:text-red-700"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-6">
-                <h4 class="text-xl font-bold mb-4">Aile Bilgileri</h4>
-                <div
-                  v-for="(member, index) in formData.aile_bilgileri"
-                  :key="index"
-                  class="mb-4 p-4 border rounded-lg"
+      <v-card-text class="pa-6">
+        <v-form ref="form" v-model="valid">
+          <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <div class="grid grid-cols-4 gap-4 bg-grey-lighten-4 p-4 rounded">
+              <!-- Profil Resmi Bölümü -->
+              <div class="col-span-4 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Profil Resmi</label
                 >
-                  <label class="block text-gray-700 font-bold mb-2">
-                    Aile Üyesi {{ index + 1 }}
-                  </label>
-                  <div class="grid grid-cols-3 gap-4">
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1">Ad</label>
-                      <input
-                        v-model="member.ad"
-                        type="text"
-                        placeholder="Ad"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1"
-                        >Soyad</label
-                      >
-                      <input
-                        v-model="member.soyad"
-                        type="text"
-                        placeholder="Soyad"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1"
-                        >Kimlik No</label
-                      >
-                      <input
-                        v-model="member.kimlik_no"
-                        type="text"
-                        placeholder="Kimlik No"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1"
-                        >Yakınlık</label
-                      >
-                      <select
-                        v-model="member.yakinlik"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                      >
-                        <option value="KENDISI">Kendisi</option>
-                        <option value="ES">Eş</option>
-                        <option value="COCUK">Çocuk</option>
-                        <option value="ANNE">Anne</option>
-                        <option value="BABA">Baba</option>
-                        <option value="KARDES">Kardeş</option>
-                        <option value="DIGER">Diğer</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1"
-                        >Cinsiyet</label
-                      >
-                      <select
-                        v-model="member.cinsiyet"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                      >
-                        <option value="E">Erkek</option>
-                        <option value="K">Kadın</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-sm text-gray-600 mb-1"
-                        >Doğum Tarihi</label
-                      >
-                      <input
-                        v-model="member.dogum_tarihi"
-                        type="date"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                      />
-                    </div>
-                  </div>
-                  <div class="mt-2 flex items-center">
-                    <label class="mr-2 text-sm text-gray-600"
-                      >Engel Durumu</label
-                    >
-                    <input
-                      type="checkbox"
-                      v-model="member.engel_durumu"
-                      class="form-checkbox h-5 w-5 text-blue-600"
+                <div class="flex flex-col items-center space-y-4">
+                  <div
+                    v-if="formData.profil_resmi_preview"
+                    class="relative w-40 h-40"
+                  >
+                    <img
+                      :src="formData.profil_resmi_preview"
+                      class="w-40 h-40 object-cover rounded-lg"
+                      alt="Profil Resmi"
                     />
-                    <div v-if="member.engel_durumu" class="ml-4 flex-1">
-                      <div class="mb-2">
-                        <label class="block text-sm text-gray-600 mb-1"
-                          >Engel Açıklaması</label
-                        >
-                        <textarea
-                          v-model="member.engel_aciklama"
-                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                          rows="2"
-                          placeholder="Engel durumu hakkında detaylı açıklama..."
-                        ></textarea>
-                      </div>
-                    </div>
                     <button
-                      type="button"
-                      @click="removeFamilyMember(index)"
-                      class="ml-auto text-red-600 hover:text-red-900 flex items-center"
+                      @click="removeProfileImage"
+                      class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5 mr-1"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                      Kaldır
+                      <i class="fas fa-times"></i>
                     </button>
                   </div>
+                  <div class="flex space-x-4">
+                    <v-btn
+                      color="primary"
+                      variant="outlined"
+                      @click="$refs.fileInput.click()"
+                      prepend-icon="mdi-upload"
+                      size="large"
+                    >
+                      Dosyadan Yükle
+                    </v-btn>
+                    <v-btn
+                      color="primary"
+                      variant="outlined"
+                      @click="startCamera"
+                      prepend-icon="mdi-camera"
+                      size="large"
+                    >
+                      Kameradan Çek
+                    </v-btn>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    @change="handleProfileImageChange"
+                    class="hidden"
+                    ref="fileInput"
+                  />
                 </div>
-                <button
-                  type="button"
-                  @click="addFamilyMember"
-                  class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5 mr-2"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+              </div>
+
+              <!-- Temel Bilgiler -->
+              <v-col cols="12" md="6" v-if="editMode">
+                <v-text-field
+                  v-model="formData.dosya_no"
+                  label="Dosya No"
+                  variant="outlined"
+                  readonly
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.kayit_tarihi"
+                  label="Kayıt Tarihi"
+                  type="date"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.ad"
+                  label="Ad"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.soyad"
+                  label="Soyad"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.kimlik_no"
+                  label="Kimlik No"
+                  variant="outlined"
+                  required
+                  pattern="[0-9]*"
+                  inputmode="numeric"
+                  @input="handleKimlikNoInput"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-select
+                  v-model="formData.uyruk"
+                  :items="UYRUK_CHOICES"
+                  item-title="label"
+                  item-value="value"
+                  label="Uyruk"
+                  variant="outlined"
+                  required
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.telefon"
+                  label="Telefon"
+                  variant="outlined"
+                  required
+                  pattern="[0-9]*"
+                  inputmode="numeric"
+                  maxlength="11"
+                  @input="handleTelefonInput"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.ilce"
+                  label="İlçe"
+                  variant="outlined"
+                  value="Yeni Mahalle"
+                  readonly
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.mahalle"
+                  label="Mahalle"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.cadde_sokak"
+                  label="Cadde/Sokak"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.bina_no"
+                  label="Bina No"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.daire_no"
+                  label="Daire No"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-select
+                  v-model="formData.kira_durumu"
+                  :items="[
+                    { title: 'Ev Sahibi', value: 'EV_SAHIBI' },
+                    { title: 'Kiracı', value: 'KIRACI' },
+                  ]"
+                  label="Kira Durumu"
+                  variant="outlined"
+                  required
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.gelir_durumu"
+                  label="Gelir Durumu (TL)"
+                  type="number"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.dolduran_kisi"
+                  label="Dolduran Kişi"
+                  variant="outlined"
+                  readonly
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.iban"
+                  label="IBAN"
+                  variant="outlined"
+                  required
+                  @input="handleIbanInput"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="10">
+                <v-text-field
+                  v-model="formData.yardim_aldigi_yerler"
+                  label="Yardım Aldığı Yerler"
+                  variant="outlined"
+                  required
+                ></v-text-field>
+              </v-col>
+            </div>
+
+            <!-- İstenen Belgeler -->
+            <div class="mt-6">
+              <v-card class="mb-4 rounded-lg" elevation="1">
+                <v-card-title class="bg-grey-lighten-4">
+                  <v-icon start icon="mdi-file-document" class="mr-2"></v-icon>
+                  İstenen Belgeler
+                </v-card-title>
+                <v-card-text>
+                  <div class="grid grid-cols-2 gap-6">
+                    <div
+                      v-for="(belgeType, index) in Object.keys(
+                        formData.belgeler
+                      )"
+                      :key="index"
+                      class="bg-grey-lighten-4 p-4 rounded-lg border border-grey-lighten-2 hover:border-primary transition-all duration-200"
+                    >
+                      <div class="flex items-center justify-between mb-2">
+                        <label class="block text-gray-700 font-bold">
+                          {{ getBelgeLabel(belgeType) }}
+                        </label>
+                        <div class="flex items-center space-x-2">
+                          <v-btn
+                            color="primary"
+                            variant="text"
+                            @click="triggerFileInput(belgeType)"
+                            size="small"
+                          >
+                            <v-icon start icon="mdi-upload"></v-icon>
+                            Yükle
+                          </v-btn>
+                          <input
+                            type="file"
+                            :ref="(el) => (fileInputs[belgeType] = el)"
+                            @change="handleFileUpload($event, belgeType)"
+                            class="hidden"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            multiple
+                          />
+                        </div>
+                      </div>
+                      <p class="text-sm text-gray-600 mb-3">
+                        {{ getBelgeAciklama(belgeType) }}
+                      </p>
+                      <div
+                        v-if="formData.belgeler[belgeType]?.length"
+                        class="space-y-2"
+                      >
+                        <div
+                          v-for="(file, fileIndex) in formData.belgeler[
+                            belgeType
+                          ]"
+                          :key="fileIndex"
+                          class="flex items-center justify-between bg-white p-2 rounded border"
+                        >
+                          <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-700 truncate">{{
+                              file.name
+                            }}</span>
+                            <div class="flex space-x-2">
+                              <v-btn
+                                v-if="file.url && isImageFile(file.name)"
+                                @click="showPreview(file.url)"
+                                color="primary"
+                                variant="text"
+                                size="small"
+                                icon="mdi-eye"
+                              ></v-btn>
+                              <v-btn
+                                v-if="file.url"
+                                :href="file.url"
+                                target="_blank"
+                                color="primary"
+                                variant="text"
+                                size="small"
+                                icon="mdi-download"
+                              ></v-btn>
+                            </div>
+                          </div>
+                          <v-btn
+                            color="error"
+                            variant="text"
+                            size="small"
+                            icon="mdi-delete"
+                            @click="removeFile(belgeType, fileIndex)"
+                          ></v-btn>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
+
+            <!-- Aile Bilgileri -->
+            <div class="mt-6">
+              <v-card class="mb-4 rounded-lg" elevation="1">
+                <v-card-title class="bg-grey-lighten-4">
+                  <v-icon start icon="mdi-account-group" class="mr-2"></v-icon>
+                  Aile Bilgileri
+                </v-card-title>
+                <v-card-text>
+                  <div
+                    v-for="(member, index) in formData.aile_bilgileri"
+                    :key="index"
+                    class="mb-4 p-4 border rounded-lg bg-grey-lighten-4"
                   >
-                    <path
-                      fill-rule="evenodd"
-                      d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  Aile Üyesi Ekle
-                </button>
-              </div>
+                    <div class="flex justify-between items-center mb-4">
+                      <h4 class="text-lg font-semibold">
+                        Aile Üyesi {{ index + 1 }}
+                      </h4>
+                      <v-btn
+                        color="error"
+                        variant="text"
+                        size="small"
+                        @click="removeFamilyMember(index)"
+                        prepend-icon="mdi-delete"
+                      >
+                        Kaldır
+                      </v-btn>
+                    </div>
+                    <v-row>
+                      <v-col cols="12" md="4">
+                        <v-text-field
+                          v-model="member.ad"
+                          label="Ad"
+                          variant="outlined"
+                          required
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" md="4">
+                        <v-text-field
+                          v-model="member.soyad"
+                          label="Soyad"
+                          variant="outlined"
+                          required
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" md="4">
+                        <v-text-field
+                          v-model="member.kimlik_no"
+                          label="Kimlik No"
+                          variant="outlined"
+                          required
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" md="4">
+                        <v-select
+                          v-model="member.yakinlik"
+                          :items="[
+                            { title: 'Kendisi', value: 'KENDISI' },
+                            { title: 'Eş', value: 'ES' },
+                            { title: 'Çocuk', value: 'COCUK' },
+                            { title: 'Anne', value: 'ANNE' },
+                            { title: 'Baba', value: 'BABA' },
+                            { title: 'Kardeş', value: 'KARDES' },
+                            { title: 'Diğer', value: 'DIGER' },
+                          ]"
+                          label="Yakınlık"
+                          variant="outlined"
+                          required
+                        ></v-select>
+                      </v-col>
+                      <v-col cols="12" md="4">
+                        <v-select
+                          v-model="member.cinsiyet"
+                          :items="[
+                            { title: 'Erkek', value: 'E' },
+                            { title: 'Kadın', value: 'K' },
+                          ]"
+                          label="Cinsiyet"
+                          variant="outlined"
+                          required
+                        ></v-select>
+                      </v-col>
+                      <v-col cols="12" md="4">
+                        <v-text-field
+                          v-model="member.dogum_tarihi"
+                          label="Doğum Tarihi"
+                          type="date"
+                          variant="outlined"
+                        ></v-text-field>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12">
+                        <v-checkbox
+                          v-model="member.engel_durumu"
+                          label="Engel Durumu"
+                          color="primary"
+                        ></v-checkbox>
+                        <v-expand-transition>
+                          <div v-if="member.engel_durumu">
+                            <v-textarea
+                              v-model="member.engel_aciklama"
+                              label="Engel Açıklaması"
+                              variant="outlined"
+                              rows="2"
+                              placeholder="Engel durumu hakkında detaylı açıklama..."
+                            ></v-textarea>
+                          </div>
+                        </v-expand-transition>
+                      </v-col>
+                    </v-row>
+                  </div>
+                  <v-btn
+                    color="success"
+                    @click="addFamilyMember"
+                    prepend-icon="mdi-plus"
+                    class="mt-4"
+                  >
+                    Aile Üyesi Ekle
+                  </v-btn>
+                </v-card-text>
+              </v-card>
             </div>
+          </div>
+        </v-form>
+      </v-card-text>
 
-            <div class="flex justify-end mt-6">
-              <button
-                type="submit"
-                class="bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                {{ editMode ? "Güncelle" : "Kaydet" }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Kamera Modal -->
-    <div
-      v-if="showCamera"
-      class="fixed inset-0 z-[300] overflow-y-auto"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0"
-      >
-        <div
-          class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-        ></div>
-        <div
-          class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+      <v-card-actions class="pa-4 bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          color="error"
+          variant="outlined"
+          @click="$emit('close')"
+          class="mr-2"
         >
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  Fotoğraf Çek
-                </h3>
-                <div class="relative">
-                  <video
-                    ref="videoRef"
-                    class="w-full rounded-lg"
-                    autoplay
-                    playsinline
-                  ></video>
-                  <canvas ref="canvasRef" class="hidden"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              @click="capturePhoto"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              Fotoğraf Çek
-            </button>
-            <button
-              type="button"
-              @click="closeCamera"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              İptal
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Resim Önizleme Modal -->
-    <div
-      v-if="previewImage"
-      class="fixed inset-0 z-[70] overflow-y-auto"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="flex items-center justify-center min-h-screen p-4">
-        <div
-          class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          @click="closePreview"
-        ></div>
-        <div
-          class="relative bg-white rounded-lg overflow-hidden shadow-xl max-w-3xl mx-auto"
+          <v-icon start icon="mdi-close"></v-icon>
+          İptal
+        </v-btn>
+        <v-btn
+          color="primary"
+          :loading="loading"
+          :disabled="!valid || loading"
+          @click="handleSubmit"
         >
-          <div class="relative">
-            <img
-              :src="previewImage"
-              class="max-h-[80vh] w-auto"
-              alt="Belge Önizleme"
-            />
-            <button
-              @click="closePreview"
-              class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 focus:outline-none"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+          <v-icon start icon="mdi-content-save"></v-icon>
+          {{ editMode ? "Güncelle" : "Kaydet" }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Kamera Modal -->
+  <v-dialog v-model="showCamera" max-width="600px">
+    <v-card>
+      <v-card-title class="text-h5 bg-emerald-800 text-white pa-4">
+        <v-icon start icon="mdi-camera" class="mr-2"></v-icon>
+        Fotoğraf Çek
+      </v-card-title>
+      <v-card-text class="pa-4">
+        <div class="relative">
+          <video
+            ref="videoRef"
+            class="w-full rounded-lg"
+            autoplay
+            playsinline
+          ></video>
+          <canvas ref="canvasRef" class="hidden"></canvas>
         </div>
-      </div>
-    </div>
-  </div>
+      </v-card-text>
+      <v-card-actions class="pa-4 bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn color="primary" @click="capturePhoto" prepend-icon="mdi-camera">
+          Fotoğraf Çek
+        </v-btn>
+        <v-btn
+          color="error"
+          variant="outlined"
+          @click="closeCamera"
+          class="ml-2"
+        >
+          İptal
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Resim Önizleme Modal -->
+  <v-dialog v-model="previewImage" max-width="800px">
+    <v-card>
+      <v-card-title class="text-h5 bg-emerald-800 text-white pa-4">
+        <v-icon start icon="mdi-image" class="mr-2"></v-icon>
+        Belge Önizleme
+      </v-card-title>
+      <v-card-text class="pa-4">
+        <div class="relative">
+          <img
+            :src="previewImage"
+            class="max-h-[80vh] w-auto mx-auto"
+            alt="Belge Önizleme"
+          />
+        </div>
+      </v-card-text>
+      <v-card-actions class="pa-4 bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn color="error" variant="outlined" @click="closePreview">
+          Kapat
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -687,7 +549,7 @@ export default {
       default: () => ({}),
     },
   },
-  emits: ["close", "saved"],
+  emits: ["close", "saved", "update:showModal"],
   setup(props, { emit }) {
     const username = ref(localStorage.getItem("username") || "");
     const fileInputs = ref({});
@@ -1287,3 +1149,81 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.v-card {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.v-card-title {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.form-field {
+  font-size: 1.1rem;
+}
+
+.form-field :deep(.v-field__input) {
+  min-height: 48px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.form-field :deep(.v-field__outline) {
+  border-width: 2px;
+}
+
+.form-field :deep(.v-label) {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+.modern-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-table .v-table__wrapper > table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th {
+  background-color: transparent !important;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.modern-table .v-table__wrapper > table > thead > tr > th,
+.modern-table .v-table__wrapper > table > tbody > tr > td {
+  border: none !important;
+}
+
+.hover-row:hover {
+  background-color: transparent !important;
+}
+
+.search-results-list {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-results-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.search-results-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+</style>

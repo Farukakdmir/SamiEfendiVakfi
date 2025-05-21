@@ -614,6 +614,7 @@ import { UYRUK_CHOICES, DURUM_CHOICES, BELGE_TURU_CHOICES } from "../constants";
 import * as XLSX from "xlsx";
 import { useNavbarStore } from "../store/navbar";
 import { printDosya, formatDate, formatAddress } from "../utils/printUtils";
+import { useSahsiYardimStore } from "../store/sahsiYardim";
 
 export default {
   name: "Files",
@@ -625,6 +626,7 @@ export default {
   setup() {
     const router = useRouter();
     const navbarStore = useNavbarStore();
+    const sahsiYardimStore = useSahsiYardimStore();
     const isOpen = computed(() => navbarStore.isOpen);
     const username = ref(localStorage.getItem("username") || "");
     const dosyalar = ref([]);
@@ -648,7 +650,7 @@ export default {
     const selectedYardimTipi = ref("");
     const showNoResults = ref(false);
     const error = ref(null);
-    const sortOrder = ref("-kayit_tarihi"); // Varsayılan sıralama
+    const sortOrder = ref("dosya_no");
 
     const totalPages = computed(() => {
       return Math.ceil(totalItems.value / itemsPerPage.value);
@@ -711,8 +713,12 @@ export default {
 
     // Yardım tipini al
     const getYardimTipi = (dosya) => {
-      if (dosya.yardim_tipi === "individual" || dosya.yardim_tipi === "group") {
-        return dosya.yardim_tipi;
+      const yardim = sahsiYardimStore.getYardimByDosyaNo(dosya.id);
+      if (
+        yardim &&
+        (yardim.yardim_tipi === "individual" || yardim.yardim_tipi === "group")
+      ) {
+        return yardim.yardim_tipi;
       }
       return null;
     };
@@ -779,8 +785,13 @@ export default {
     };
 
     const toggleSort = () => {
-      sortOrder.value =
-        sortOrder.value === "-kayit_tarihi" ? "kayit_tarihi" : "-kayit_tarihi";
+      if (sortOrder.value === "dosya_no") {
+        sortOrder.value = "-kayit_tarihi";
+      } else if (sortOrder.value === "-kayit_tarihi") {
+        sortOrder.value = "kayit_tarihi";
+      } else {
+        sortOrder.value = "-kayit_tarihi";
+      }
       loadDosyalar();
     };
 
@@ -842,15 +853,9 @@ export default {
 
         const dosyaData = response.data.results;
 
-        // Yardım verilerini al
-        const yardimResponse = await apiService.getSahsiYardimlar();
-        const yardimlar = yardimResponse.data.results || yardimResponse.data;
-
         // Dosya verilerini işle ve yardım tipini ekle
         dosyalar.value = dosyaData.map((dosya) => {
-          const yardim = yardimlar.find(
-            (y) => y.dosyalar && y.dosyalar.some((d) => d.id === dosya.id)
-          );
+          const yardim = sahsiYardimStore.getYardimByDosyaNo(dosya.id);
           return {
             ...dosya,
             yardim_tipi: yardim ? yardim.yardim_tipi : null,
@@ -935,8 +940,9 @@ export default {
     });
 
     // Sayfa yüklendiğinde verileri getir
-    onMounted(() => {
-      loadDosyalar();
+    onMounted(async () => {
+      await sahsiYardimStore.fetchYardimlar();
+      await loadDosyalar();
     });
 
     const editDosya = async (dosya) => {
@@ -999,6 +1005,7 @@ export default {
     const handleModalSaved = async () => {
       try {
         await loadDosyalar();
+        await sahsiYardimStore.updateYardimlar(); // Yardım verilerini güncelle
         showModal.value = false;
         editMode.value = false;
         selectedDosya.value = null;
