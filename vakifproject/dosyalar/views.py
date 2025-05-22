@@ -25,7 +25,7 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 100
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 10000  # Maksimum sayfa boyutunu artırdık
 
@@ -631,7 +631,7 @@ class MaddiYardimViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['yardim_yapan_ad_soyad', 'yardim_yapan_telefon', 'dosyalar__ad', 'dosyalar__soyad', 'dosyalar__dosya_no']
+    search_fields = ['yardim_yapan_ad_soyad', 'yardim_yapan_telefon']
     ordering_fields = ['created_at', 'tutar']
 
     def get_queryset(self):
@@ -642,9 +642,9 @@ class MaddiYardimViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(
                 Q(yardim_yapan_ad_soyad__icontains=search) |
                 Q(yardim_yapan_telefon__icontains=search) |
-                Q(dosyalar__ad__icontains=search) |
-                Q(dosyalar__soyad__icontains=search) |
-                Q(dosyalar__dosya_no__icontains=search)
+                Q(dosya_tutarlari__dosya__ad__icontains=search) |
+                Q(dosya_tutarlari__dosya__soyad__icontains=search) |
+                Q(dosya_tutarlari__dosya__dosya_no__icontains=search)
             ).distinct()
         
         return queryset.order_by('-created_at')
@@ -671,23 +671,31 @@ class SahsiYardimViewSet(viewsets.ModelViewSet):
     queryset = SahsiYardim.objects.all().order_by('-created_at')
     serializer_class = SahsiYardimSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None  # Sayfalamayı devre dışı bırak
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['ad_soyad', 'telefon']
+    ordering_fields = ['created_at']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = SahsiYardim.objects.all()
         search = self.request.query_params.get('search', None)
         
         if search:
             queryset = queryset.filter(
                 Q(ad_soyad__icontains=search) |
-                Q(telefon__icontains=search) |
-                Q(yardimcilar__ad_soyad__icontains=search)
+                Q(telefon__icontains=search)
             ).distinct()
             
-        return queryset
+        return queryset.order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

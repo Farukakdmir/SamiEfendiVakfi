@@ -64,6 +64,23 @@
           </div>
         </div>
 
+        <!-- No Results Message -->
+        <div v-if="showNoResults" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">
+            Arama kriterlerinize uygun sonuç bulunamadı.
+          </p>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoading" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">Yükleniyor...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="error" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-red-500 text-center">{{ error }}</p>
+        </div>
+
         <!-- Kayıtlar Tablosu -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
           <v-table>
@@ -380,6 +397,9 @@ export default {
     const searchQuery = ref("");
     const yardimlar = ref([]);
     const selectedYardim = ref(null);
+    const showNoResults = ref(false);
+    const isLoading = ref(false);
+    const error = ref(null);
 
     // Table headers
     const tableHeaders = [
@@ -392,88 +412,101 @@ export default {
 
     // Sayfalama için state
     const currentPage = ref(1);
-    const pageSize = ref(100);
+    const pageSize = ref(10);
     const totalItems = ref(0);
     const totalPages = computed(() =>
       Math.ceil(totalItems.value / pageSize.value)
     );
-    const startItem = computed(
-      () => (currentPage.value - 1) * pageSize.value + 1
-    );
-    const endItem = computed(() =>
-      Math.min(currentPage.value * pageSize.value, totalItems.value)
-    );
+
+    // Sayfalama hesaplamaları
+    const displayedPages = computed(() => {
+      const pages = [];
+      const maxPages = 5;
+      let start = Math.max(1, currentPage.value - Math.floor(maxPages / 2));
+      let end = Math.min(totalPages.value, start + maxPages - 1);
+      if (end - start + 1 < maxPages) {
+        start = Math.max(1, end - maxPages + 1);
+      }
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      return pages;
+    });
 
     // Para formatı için yardımcı fonksiyon
     const formatCurrency = (value) => {
       return new Intl.NumberFormat("tr-TR").format(value);
     };
 
-    const clearSearch = () => {
-      searchQuery.value = "";
+    // Debounce fonksiyonu
+    const debounce = (fn, delay) => {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+      };
     };
 
-    const filteredRecords = computed(() => {
-      if (!searchQuery.value) return yardimlar.value;
-      const query = searchQuery.value.toLowerCase();
-      return yardimlar.value.filter(
-        (record) =>
-          record.yardim_yapan_ad_soyad.toLowerCase().includes(query) ||
-          record.yardim_yapan_telefon.toLowerCase().includes(query)
-      );
-    });
+    // Debounced fetchYardimlar fonksiyonu
+    const debouncedFetchYardimlar = debounce(() => {
+      currentPage.value = 1; // Arama yapıldığında ilk sayfaya dön
+      fetchYardimlar();
+    }, 500); // 500ms gecikme
 
-    // Yardımları getir
-    const fetchYardimlar = async () => {
-      try {
-        const response = await apiService.getMaddiYardimlar({
-          page: currentPage.value,
-          page_size: pageSize.value,
-        });
-        yardimlar.value = response.data.results || response.data;
-        totalItems.value = response.data.count || response.data.length;
-      } catch (error) {
-        console.error("Yardımlar yüklenirken hata:", error);
-      }
-    };
-
-    // Sayfalama hesaplamaları
-    const displayedPages = computed(() => {
-      const pages = [];
-      const maxVisiblePages = 5;
-
-      if (totalPages.value <= maxVisiblePages) {
-        for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i);
-        }
-      } else {
-        pages.push(1);
-
-        const start = Math.max(2, currentPage.value - 1);
-        const end = Math.min(totalPages.value - 1, currentPage.value + 1);
-
-        if (start > 2) {
-          pages.push("...");
-        }
-
-        for (let i = start; i <= end; i++) {
-          pages.push(i);
-        }
-
-        if (end < totalPages.value - 1) {
-          pages.push("...");
-        }
-
-        pages.push(totalPages.value);
-      }
-
-      return pages;
+    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
+    watch(searchQuery, () => {
+      debouncedFetchYardimlar();
     });
 
     // Sayfa değiştiğinde verileri yeniden yükle
     watch(currentPage, () => {
       fetchYardimlar();
     });
+
+    // Yardımları getir
+    const fetchYardimlar = async () => {
+      try {
+        isLoading.value = true;
+        error.value = null;
+        const params = {
+          page: currentPage.value,
+          page_size: pageSize.value,
+        };
+
+        // Arama filtresi
+        if (searchQuery.value && searchQuery.value.trim()) {
+          params.search = searchQuery.value.trim();
+        }
+
+        const response = await apiService.getMaddiYardimlar(params);
+
+        if (response.data && response.data.results) {
+          yardimlar.value = response.data.results;
+          totalItems.value = response.data.count || 0;
+          showNoResults.value = yardimlar.value.length === 0;
+        } else {
+          error.value = "Yardımlar yüklenirken bir hata oluştu.";
+          yardimlar.value = [];
+          totalItems.value = 0;
+          showNoResults.value = true;
+        }
+      } catch (error) {
+        console.error("Yardımlar yüklenirken hata:", error);
+        error.value = "Yardımlar yüklenirken bir hata oluştu.";
+        yardimlar.value = [];
+        totalItems.value = 0;
+        showNoResults.value = true;
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    // Arama sorgusunu temizle
+    const clearSearch = () => {
+      searchQuery.value = "";
+      currentPage.value = 1;
+      fetchYardimlar();
+    };
 
     // Yeni yardım kaydet
     const handleYardimSaved = async (updatedYardim) => {
@@ -532,7 +565,7 @@ export default {
     const exportToExcel = async () => {
       try {
         // Filtrelenmiş kayıtları al
-        const recordsToExport = filteredRecords.value;
+        const recordsToExport = yardimlar.value;
 
         // Excel için veri hazırlama
         const data = [];
@@ -623,15 +656,15 @@ export default {
       pageSize,
       totalItems,
       totalPages,
-      startItem,
-      endItem,
       displayedPages,
       clearSearch,
       handleEditModalClose,
       exportToExcel,
-      filteredRecords,
       tableHeaders,
       getKalanTutarClass,
+      showNoResults,
+      isLoading,
+      error,
     };
   },
 };

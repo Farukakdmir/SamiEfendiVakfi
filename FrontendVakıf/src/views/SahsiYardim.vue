@@ -101,141 +101,21 @@
           </div>
         </div>
 
-        <!-- Kayıtlar Tablosu -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Ad Soyad
-                </th>
-                <th
-                  scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Telefon
-                </th>
-                <th
-                  scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Yardım Tipi
-                </th>
-                <th
-                  scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Durum
-                </th>
-                <th
-                  scope="col"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  İşlemler
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="record in displayedYardimlar" :key="record.id">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ record.ad_soyad }}
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">{{ record.telefon }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">
-                    {{
-                      record.yardim_tipi === "individual" ? "Bireysel" : "Grup"
-                    }}
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="[
-                      'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
-                      record.grup_uye_sayisi
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-blue-100 text-blue-800',
-                    ]"
-                  >
-                    {{
-                      record.grup_uye_sayisi
-                        ? `Grup (${record.grup_uye_sayisi} kişi)`
-                        : "Bireysel"
-                    }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <v-menu>
-                    <template v-slot:activator="{ props }">
-                      <v-btn
-                        v-bind="props"
-                        variant="text"
-                        class="text-gray-400 hover:text-gray-500"
-                      >
-                        <v-icon icon="mdi-dots-vertical"></v-icon>
-                      </v-btn>
-                    </template>
-                    <v-list>
-                      <v-list-item
-                        @click="showDetail(record)"
-                        class="hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <template v-slot:prepend>
-                          <v-icon
-                            icon="mdi-eye"
-                            color="blue"
-                            class="mr-2"
-                          ></v-icon>
-                        </template>
-                        <v-list-item-title class="text-sm"
-                          >Detay</v-list-item-title
-                        >
-                      </v-list-item>
-                      <v-divider class="my-2"></v-divider>
-                      <v-list-item
-                        @click="editRecord(record)"
-                        class="hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <template v-slot:prepend>
-                          <v-icon
-                            icon="mdi-pencil"
-                            color="blue"
-                            class="mr-2"
-                          ></v-icon>
-                        </template>
-                        <v-list-item-title class="text-sm"
-                          >Düzenle</v-list-item-title
-                        >
-                      </v-list-item>
-                      <v-divider class="my-2"></v-divider>
-                      <v-list-item
-                        @click="deleteRecord(record.id)"
-                        class="hover:bg-red-50 transition-colors duration-200"
-                      >
-                        <template v-slot:prepend>
-                          <v-icon
-                            icon="mdi-delete"
-                            color="red"
-                            class="mr-2"
-                          ></v-icon>
-                        </template>
-                        <v-list-item-title class="text-sm text-red-600"
-                          >Sil</v-list-item-title
-                        >
-                      </v-list-item>
-                    </v-list>
-                  </v-menu>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- No Results Message -->
+        <div v-if="showNoResults" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">
+            Arama kriterlerinize uygun sonuç bulunamadı.
+          </p>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoading" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-gray-500 text-center">Yükleniyor...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="error" class="bg-white rounded-lg shadow p-4 mb-4">
+          <p class="text-red-500 text-center">{{ error }}</p>
         </div>
 
         <!-- Sayfalama -->
@@ -392,6 +272,143 @@
           </div>
         </div>
 
+        <!-- Kayıtlar Tablosu -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Ad Soyad
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Telefon
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Yardım Tipi
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Durum
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="record in displayedYardimlar" :key="record.id">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ record.ad_soyad }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ record.telefon }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">
+                    {{
+                      record.yardim_tipi === "individual" ? "Bireysel" : "Grup"
+                    }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    :class="[
+                      'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
+                      record.grup_uye_sayisi
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-blue-100 text-blue-800',
+                    ]"
+                  >
+                    {{
+                      record.grup_uye_sayisi
+                        ? `Grup (${record.grup_uye_sayisi} kişi)`
+                        : "Bireysel"
+                    }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <v-menu>
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        variant="text"
+                        class="text-gray-400 hover:text-gray-500"
+                      >
+                        <v-icon icon="mdi-dots-vertical"></v-icon>
+                      </v-btn>
+                    </template>
+                    <v-list>
+                      <v-list-item
+                        @click="showDetail(record)"
+                        class="hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <template v-slot:prepend>
+                          <v-icon
+                            icon="mdi-eye"
+                            color="blue"
+                            class="mr-2"
+                          ></v-icon>
+                        </template>
+                        <v-list-item-title class="text-sm"
+                          >Detay</v-list-item-title
+                        >
+                      </v-list-item>
+                      <v-divider class="my-2"></v-divider>
+                      <v-list-item
+                        @click="editRecord(record)"
+                        class="hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <template v-slot:prepend>
+                          <v-icon
+                            icon="mdi-pencil"
+                            color="blue"
+                            class="mr-2"
+                          ></v-icon>
+                        </template>
+                        <v-list-item-title class="text-sm"
+                          >Düzenle</v-list-item-title
+                        >
+                      </v-list-item>
+                      <v-divider class="my-2"></v-divider>
+                      <v-list-item
+                        @click="deleteRecord(record.id)"
+                        class="hover:bg-red-50 transition-colors duration-200"
+                      >
+                        <template v-slot:prepend>
+                          <v-icon
+                            icon="mdi-delete"
+                            color="red"
+                            class="mr-2"
+                          ></v-icon>
+                        </template>
+                        <v-list-item-title class="text-sm text-red-600"
+                          >Sil</v-list-item-title
+                        >
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <!-- Yeni Kayıt Modal -->
         <SahsiYardimEkleModal
           :show="showNewRecordModal"
@@ -448,6 +465,9 @@ export default {
     const selectedYardimTipi = ref("");
     const showFilters = ref(false);
     const displayedYardimlar = ref([]);
+    const showNoResults = ref(false);
+    const isLoading = ref(false);
+    const error = ref(null);
 
     // Sayfalama için state
     const currentPage = ref(1);
@@ -457,69 +477,74 @@ export default {
       Math.ceil(totalItems.value / pageSize.value)
     );
 
-    const clearSearch = () => {
-      searchQuery.value = "";
-    };
-
     // Yardımları getir
     const fetchYardimlar = async () => {
       try {
-        const response = await apiService.getSahsiYardimlar();
-        yardimlar.value = response.data;
-        totalItems.value = response.data.length;
-        updateDisplayedRecords();
+        isLoading.value = true;
+        error.value = null;
+        const params = {
+          page: currentPage.value,
+          page_size: pageSize.value,
+        };
+
+        // Arama filtresi
+        if (searchQuery.value && searchQuery.value.trim()) {
+          params.search = searchQuery.value.trim();
+        }
+
+        // Yardım tipi filtresi
+        if (selectedYardimTipi.value) {
+          params.yardim_tipi = selectedYardimTipi.value;
+        }
+
+        const response = await apiService.getSahsiYardimlar(params);
+        yardimlar.value = response.data.results || [];
+        totalItems.value = response.data.count || 0;
+        displayedYardimlar.value = yardimlar.value;
+        showNoResults.value = yardimlar.value.length === 0;
       } catch (error) {
         console.error("Yardımlar yüklenirken hata:", error);
+        error.value = "Yardımlar yüklenirken bir hata oluştu.";
+        yardimlar.value = [];
+        totalItems.value = 0;
+        displayedYardimlar.value = [];
+        showNoResults.value = true;
+      } finally {
+        isLoading.value = false;
       }
     };
 
-    // Görüntülenecek kayıtları güncelle
-    const updateDisplayedRecords = () => {
-      const filtered = filteredRecords.value;
-      const startIndex = (currentPage.value - 1) * pageSize.value;
-      const endIndex = startIndex + pageSize.value;
-      displayedYardimlar.value = filtered.slice(startIndex, endIndex);
-    };
-
-    const filteredRecords = computed(() => {
-      let filtered = yardimlar.value;
-
-      // Arama filtresi
-      if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        filtered = filtered.filter(
-          (record) =>
-            record.ad_soyad.toLowerCase().includes(query) ||
-            record.telefon.toLowerCase().includes(query)
-        );
-      }
-
-      // Yardım tipi filtresi
-      if (selectedYardimTipi.value) {
-        filtered = filtered.filter(
-          (record) => record.yardim_tipi === selectedYardimTipi.value
-        );
-      }
-
-      return filtered;
+    // Sayfa değiştiğinde verileri yeniden yükle
+    watch(currentPage, () => {
+      fetchYardimlar();
     });
 
-    // Sayfa değiştiğinde görüntülenecek kayıtları güncelle
-    watch([currentPage, filteredRecords], () => {
-      updateDisplayedRecords();
+    // Arama sorgusu değiştiğinde verileri yeniden yükle
+    watch(searchQuery, () => {
+      currentPage.value = 1; // Arama yapıldığında ilk sayfaya dön
+      fetchYardimlar();
     });
 
-    // Yardım tipi değiştiğinde sayfayı sıfırla
+    // Yardım tipi değiştiğinde verileri yeniden yükle
     watch(selectedYardimTipi, () => {
       currentPage.value = 1;
-      updateDisplayedRecords();
+      fetchYardimlar();
     });
 
-    // Arama yapıldığında sayfayı sıfırla
-    watch(searchQuery, () => {
+    // Arama sorgusunu temizle
+    const clearSearch = () => {
+      searchQuery.value = "";
       currentPage.value = 1;
-      updateDisplayedRecords();
-    });
+      fetchYardimlar();
+    };
+
+    // Filtreleri temizle
+    const clearFilters = () => {
+      selectedYardimTipi.value = "";
+      showFilters.value = false;
+      currentPage.value = 1;
+      fetchYardimlar();
+    };
 
     // Yeni yardım kaydet
     const handleYardimSaved = async () => {
@@ -559,12 +584,6 @@ export default {
           console.error("Yardım silinirken hata:", error);
         }
       }
-    };
-
-    // Filtreleri temizle
-    const clearFilters = () => {
-      selectedYardimTipi.value = "";
-      showFilters.value = false;
     };
 
     // Dışarı tıklandığında filtreleri kapat
@@ -626,20 +645,22 @@ export default {
       yardimlar,
       selectedYardim,
       selectedYardimTipi,
-      handleYardimSaved,
-      showDetail,
-      editRecord,
-      deleteRecord,
+      showFilters,
+      displayedYardimlar,
       currentPage,
       pageSize,
       totalItems,
       totalPages,
-      filteredRecords,
-      clearSearch,
-      showFilters,
-      clearFilters,
       displayedPages,
-      displayedYardimlar,
+      clearSearch,
+      clearFilters,
+      handleYardimSaved,
+      showDetail,
+      editRecord,
+      deleteRecord,
+      showNoResults,
+      isLoading,
+      error,
     };
   },
 };

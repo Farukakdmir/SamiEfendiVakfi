@@ -272,7 +272,8 @@ const apiService = {
   },
 
   // Maddi Yardım API'leri
-  getMaddiYardimlar: () => api.get(apiService.endpoints.maddiYardim.base),
+  getMaddiYardimlar: (params) =>
+    api.get(apiService.endpoints.maddiYardim.base, { params }),
   getMaddiYardim: (id) =>
     api.get(`${apiService.endpoints.maddiYardim.base}${id}/`),
   createMaddiYardim: (data) =>
@@ -393,14 +394,15 @@ const apiService = {
 
   // Şahsi Yardım API'leri
   getSahsiYardimlar: (params = {}) => {
-    // Eğer tüm kayıtlar isteniyorsa
-    if (params.all) {
-      return api.get(apiService.endpoints.sahsiYardim.base, {
-        params: { all: true },
-      });
-    }
-    // Normal sayfalama ile
-    return api.get(apiService.endpoints.sahsiYardim.base, { params });
+    const queryParams = {
+      page: params.page || 1,
+      page_size: params.page_size || 10,
+      search: params.search || "",
+      ordering: params.ordering || "-created_at",
+    };
+    return api.get(apiService.endpoints.sahsiYardim.base, {
+      params: queryParams,
+    });
   },
   getSahsiYardim: (id) =>
     api.get(`${apiService.endpoints.sahsiYardim.base}${id}/`),
