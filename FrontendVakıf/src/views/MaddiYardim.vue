@@ -74,7 +74,6 @@
                 <th>Yardım Tutarı</th>
                 <th>Toplam Tutar</th>
                 <th>Kalan Tutar</th>
-                <th>Dosya Bilgileri</th>
                 <th>Tarih</th>
                 <th>İşlemler</th>
               </tr>
@@ -93,28 +92,6 @@
                   >
                     {{ formatCurrency(yardim.yardim_tutar - yardim.tutar) }} ₺
                   </span>
-                </td>
-                <td>
-                  <div
-                    v-if="
-                      yardim.dosya_bilgileri &&
-                      yardim.dosya_bilgileri.length > 0
-                    "
-                  >
-                    <div
-                      v-for="dosya in yardim.dosya_bilgileri"
-                      :key="dosya.id"
-                      class="mb-1"
-                    >
-                      {{ dosya.dosya_bilgisi.dosya_no }} -
-                      {{ dosya.dosya_bilgisi.ad }}
-                      {{ dosya.dosya_bilgisi.soyad }} ({{
-                        formatCurrency(dosya.tutar)
-                      }}
-                      ₺)
-                    </div>
-                  </div>
-                  <div v-else class="text-grey">Dosya bilgisi yok</div>
                 </td>
                 <td>
                   {{ new Date(yardim.created_at).toLocaleDateString("tr-TR") }}
