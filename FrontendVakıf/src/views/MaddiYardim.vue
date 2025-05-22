@@ -66,37 +66,60 @@
 
         <!-- Kayıtlar Tablosu -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <v-table>
+            <thead>
               <tr>
-                <th
-                  v-for="(header, index) in tableHeaders"
-                  :key="'header-' + index"
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  {{ header }}
-                </th>
+                <th>Yardım Yapan</th>
+                <th>Telefon</th>
+                <th>Yardım Tutarı</th>
+                <th>Toplam Tutar</th>
+                <th>Kalan Tutar</th>
+                <th>Dosya Bilgileri</th>
+                <th>Tarih</th>
+                <th>İşlemler</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr
-                v-for="(yardim, index) in filteredRecords"
-                :key="'yardim-' + (yardim.id || index)"
-                class="hover:bg-gray-50"
-              >
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ yardim.yardim_yapan_ad_soyad }}
+            <tbody>
+              <tr v-for="yardim in yardimlar" :key="yardim.id">
+                <td>{{ yardim.yardim_yapan_ad_soyad }}</td>
+                <td>{{ yardim.yardim_yapan_telefon }}</td>
+                <td>{{ formatCurrency(yardim.yardim_tutar) }} ₺</td>
+                <td>{{ formatCurrency(yardim.tutar) }} ₺</td>
+                <td>
+                  <span
+                    :class="
+                      getKalanTutarClass(yardim.yardim_tutar - yardim.tutar)
+                    "
+                  >
+                    {{ formatCurrency(yardim.yardim_tutar - yardim.tutar) }} ₺
+                  </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ yardim.yardim_yapan_telefon }}
+                <td>
+                  <div
+                    v-if="
+                      yardim.dosya_bilgileri &&
+                      yardim.dosya_bilgileri.length > 0
+                    "
+                  >
+                    <div
+                      v-for="dosya in yardim.dosya_bilgileri"
+                      :key="dosya.id"
+                      class="mb-1"
+                    >
+                      {{ dosya.dosya_bilgisi.dosya_no }} -
+                      {{ dosya.dosya_bilgisi.ad }}
+                      {{ dosya.dosya_bilgisi.soyad }} ({{
+                        formatCurrency(dosya.tutar)
+                      }}
+                      ₺)
+                    </div>
+                  </div>
+                  <div v-else class="text-grey">Dosya bilgisi yok</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatCurrency(yardim.yardim_tutar) }} ₺
+                <td>
+                  {{ new Date(yardim.created_at).toLocaleDateString("tr-TR") }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatCurrency(yardim.tutar) }} ₺
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td>
                   <div class="relative">
                     <v-menu
                       location="bottom end"
@@ -166,7 +189,7 @@
                 </td>
               </tr>
             </tbody>
-          </table>
+          </v-table>
         </div>
 
         <!-- Sayfalama -->
@@ -484,18 +507,8 @@ export default {
         showEditModal.value = false;
       }
 
-      // Eğer güncellenmiş veri varsa, ilgili kaydı güncelle
-      if (updatedYardim) {
-        const index = yardimlar.value.findIndex(
-          (y) => y.id === updatedYardim.id
-        );
-        if (index !== -1) {
-          yardimlar.value[index] = updatedYardim;
-        }
-      } else {
-        // Yeni kayıt eklendiyse tüm listeyi yenile
-        await fetchYardimlar();
-      }
+      // Her durumda listeyi yenile
+      await fetchYardimlar();
     };
 
     // Yardım detaylarını göster
@@ -598,6 +611,16 @@ export default {
       }
     };
 
+    // Yeni eklenen fonksiyon
+    const getKalanTutarClass = (kalanTutar) => {
+      if (kalanTutar > 0) {
+        return "text-green-600 font-medium";
+      } else if (kalanTutar < 0) {
+        return "text-red-600 font-medium";
+      }
+      return "text-gray-600";
+    };
+
     onMounted(() => {
       fetchYardimlar();
     });
@@ -631,6 +654,7 @@ export default {
       exportToExcel,
       filteredRecords,
       tableHeaders,
+      getKalanTutarClass,
     };
   },
 };

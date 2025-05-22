@@ -276,7 +276,12 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-currency-try"
+                :rules="[
+                  (v) => !!v || 'Yardım tutarı zorunludur',
+                  (v) => v > 0 || 'Yardım tutarı 0\'dan büyük olmalıdır',
+                ]"
                 required
+                @input="updateTotalTutar"
               ></v-text-field>
             </v-col>
             <v-col cols="12" md="6">
@@ -299,6 +304,8 @@
                 variant="outlined"
                 density="comfortable"
                 prepend-inner-icon="mdi-text"
+                @blur="handleAciklamaBlur"
+                @input="handleAciklamaInput"
               ></v-textarea>
             </v-col>
           </v-row>
@@ -532,12 +539,12 @@ export default {
 
       // Dosya tutarlarını topla
       Object.values(dosyaTutarlari.value).forEach((tutar) => {
-        total += Number(tutar);
+        total += Number(tutar) || 0;
       });
 
       // Manuel kayıt tutarlarını topla
       manuelKayitlar.value.forEach((kayit) => {
-        total += Number(kayit.tutar);
+        total += Number(kayit.tutar) || 0;
       });
 
       toplamTutar.value = total;
@@ -631,6 +638,39 @@ export default {
       }
     };
 
+    // Açıklama değişikliğini izle
+    const handleAciklamaInput = (event) => {
+      form.value.aciklama = event.target.value;
+    };
+
+    // Açıklama alanından çıkıldığında
+    const handleAciklamaBlur = () => {
+      // Değeri korumak için state'i güncelle
+      form.value = { ...form.value };
+    };
+
+    // Form validasyonunu izle
+    watch(
+      [
+        () => form.value.yardim_yapan_ad_soyad,
+        () => form.value.yardim_yapan_telefon,
+        () => form.value.yardim_tutar,
+      ],
+      ([adSoyad, telefon, yardimTutar]) => {
+        valid.value = !!adSoyad && !!telefon && yardimTutar > 0;
+      },
+      { immediate: true }
+    );
+
+    // Yardım tutarı değiştiğinde toplam tutarı güncelle
+    watch(
+      () => form.value.yardim_tutar,
+      (newValue) => {
+        form.value.yardim_tutar = Number(newValue) || 0;
+        updateTotalTutar();
+      }
+    );
+
     return {
       dialog,
       valid,
@@ -656,6 +696,8 @@ export default {
       addManualEntry,
       removeManuelKayit,
       resetForm,
+      handleAciklamaInput,
+      handleAciklamaBlur,
     };
   },
 };
