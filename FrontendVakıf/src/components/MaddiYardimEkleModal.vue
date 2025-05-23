@@ -652,22 +652,27 @@ export default {
     // Form validasyonunu izle
     watch(
       [
-        () => form.value.yardim_yapan_ad_soyad,
-        () => form.value.yardim_yapan_telefon,
-        () => form.value.yardim_tutar,
+        () => form.value?.yardim_yapan_ad_soyad,
+        () => form.value?.yardim_yapan_telefon,
+        () => form.value?.yardim_tutar,
       ],
       ([adSoyad, telefon, yardimTutar]) => {
-        valid.value = !!adSoyad && !!telefon && yardimTutar > 0;
+        valid.value =
+          Boolean(adSoyad) &&
+          Boolean(telefon) &&
+          (Number(yardimTutar) === 0 || Number(yardimTutar) > 0);
       },
       { immediate: true }
     );
 
     // Yardım tutarı değiştiğinde toplam tutarı güncelle
     watch(
-      () => form.value.yardim_tutar,
+      () => form.value?.yardim_tutar,
       (newValue) => {
-        form.value.yardim_tutar = Number(newValue) || 0;
-        updateTotalTutar();
+        if (form.value) {
+          form.value.yardim_tutar = Number(newValue) || 0;
+          updateTotalTutar();
+        }
       }
     );
 

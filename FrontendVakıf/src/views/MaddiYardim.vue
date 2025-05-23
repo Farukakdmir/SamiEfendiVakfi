@@ -453,32 +453,26 @@ export default {
       fetchYardimlar();
     }, 500); // 500ms gecikme
 
-    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
-    watch(searchQuery, () => {
-      debouncedFetchYardimlar();
-    });
-
-    // Sayfa değiştiğinde verileri yeniden yükle
-    watch(currentPage, () => {
-      fetchYardimlar();
-    });
-
     // Yardımları getir
     const fetchYardimlar = async () => {
       try {
         isLoading.value = true;
         error.value = null;
-        const params = {
-          page: currentPage.value,
-          page_size: pageSize.value,
-        };
+
+        // API parametrelerini hazırla
+        const params = new URLSearchParams();
+        params.append("page", currentPage.value);
+        params.append("page_size", pageSize.value);
 
         // Arama filtresi
         if (searchQuery.value && searchQuery.value.trim()) {
-          params.search = searchQuery.value.trim();
+          params.append("search", searchQuery.value.trim());
         }
 
-        const response = await apiService.getMaddiYardimlar(params);
+        // API çağrısı
+        const response = await apiService.get(
+          `/maddi-yardimlar/?${params.toString()}`
+        );
 
         if (response.data && response.data.results) {
           yardimlar.value = response.data.results;
@@ -500,6 +494,24 @@ export default {
         isLoading.value = false;
       }
     };
+
+    // Sayfa değiştiğinde verileri yeniden yükle
+    watch(currentPage, (newPage) => {
+      if (newPage > 0 && newPage <= totalPages.value) {
+        fetchYardimlar();
+      }
+    });
+
+    // Arama sorgusu değiştiğinde debounced fonksiyonu çağır
+    watch(searchQuery, () => {
+      currentPage.value = 1; // Arama yapıldığında ilk sayfaya dön
+      debouncedFetchYardimlar();
+    });
+
+    // Arama sorgusu değiştiğinde verileri yeniden yükle
+    watch(searchQuery, () => {
+      fetchYardimlar();
+    });
 
     // Arama sorgusunu temizle
     const clearSearch = () => {
