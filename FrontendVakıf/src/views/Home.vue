@@ -473,12 +473,29 @@ export default {
         stats.value = response.data;
 
         // Maddi yardım toplamını getir
-        const yardimResponse = await apiService.getMaddiYardimlar();
-        const toplamYardim =
-          yardimResponse.data.results?.reduce(
+        let toplamYardim = 0;
+        let currentPage = 1;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+          const yardimResponse = await apiService.getMaddiYardimlar(
+            currentPage,
+            100
+          );
+          const pageResults = yardimResponse.data.results || [];
+
+          // Mevcut sayfadaki yardımları topla
+          const pageTotal = pageResults.reduce(
             (acc, curr) => acc + (curr.yardim_tutar || 0),
             0
-          ) || 0;
+          );
+          toplamYardim += pageTotal;
+
+          // Sonraki sayfa var mı kontrol et
+          hasNextPage = yardimResponse.data.next !== null;
+          currentPage++;
+        }
+
         stats.value.toplam_maddi_yardim = toplamYardim;
 
         // Son işlemleri getir

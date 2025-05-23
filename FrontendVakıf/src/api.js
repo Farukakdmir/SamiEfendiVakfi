@@ -272,8 +272,13 @@ const apiService = {
   },
 
   // Maddi Yardım API'leri
-  getMaddiYardimlar: (params) =>
-    api.get(apiService.endpoints.maddiYardim.base, { params }),
+  getMaddiYardimlar: (page = 1, pageSize = 10) =>
+    api.get(apiService.endpoints.maddiYardim.base, {
+      params: {
+        page,
+        page_size: pageSize,
+      },
+    }),
   getMaddiYardim: (id) =>
     api.get(`${apiService.endpoints.maddiYardim.base}${id}/`),
   createMaddiYardim: (data) =>

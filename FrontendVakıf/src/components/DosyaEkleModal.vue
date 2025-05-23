@@ -90,6 +90,7 @@
                   v-model="formData.ad"
                   label="Ad"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Ad alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -98,6 +99,7 @@
                   v-model="formData.soyad"
                   label="Soyad"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Soyad alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -106,6 +108,10 @@
                   v-model="formData.kimlik_no"
                   label="Kimlik No"
                   variant="outlined"
+                  :rules="[
+                    (v) => !!v || 'Kimlik No alanı zorunludur',
+                    (v) => v.length === 11 || 'Kimlik No 11 haneli olmalıdır',
+                  ]"
                   required
                   pattern="[0-9]*"
                   inputmode="numeric"
@@ -120,6 +126,7 @@
                   item-value="value"
                   label="Uyruk"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Uyruk seçimi zorunludur']"
                   required
                 ></v-select>
               </v-col>
@@ -128,6 +135,10 @@
                   v-model="formData.telefon"
                   label="Telefon"
                   variant="outlined"
+                  :rules="[
+                    (v) => !!v || 'Telefon alanı zorunludur',
+                    (v) => v.length === 11 || 'Telefon 11 haneli olmalıdır',
+                  ]"
                   required
                   pattern="[0-9]*"
                   inputmode="numeric"
@@ -149,6 +160,7 @@
                   v-model="formData.mahalle"
                   label="Mahalle"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Mahalle alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -157,6 +169,7 @@
                   v-model="formData.cadde_sokak"
                   label="Cadde/Sokak"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Cadde/Sokak alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -165,6 +178,7 @@
                   v-model="formData.bina_no"
                   label="Bina No"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Bina No alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -173,6 +187,7 @@
                   v-model="formData.daire_no"
                   label="Daire No"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Daire No alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -185,6 +200,7 @@
                   ]"
                   label="Kira Durumu"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Kira durumu seçimi zorunludur']"
                   required
                 ></v-select>
               </v-col>
@@ -194,6 +210,7 @@
                   label="Gelir Durumu (TL)"
                   type="number"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'Gelir durumu alanı zorunludur']"
                   required
                 ></v-text-field>
               </v-col>
@@ -210,6 +227,7 @@
                   v-model="formData.iban"
                   label="IBAN"
                   variant="outlined"
+                  :rules="[(v) => !!v || 'IBAN alanı zorunludur']"
                   required
                   @input="handleIbanInput"
                 ></v-text-field>
@@ -219,6 +237,9 @@
                   v-model="formData.yardim_aldigi_yerler"
                   label="Yardım Aldığı Yerler"
                   variant="outlined"
+                  :rules="[
+                    (v) => !!v || 'Yardım aldığı yerler alanı zorunludur',
+                  ]"
                   required
                 ></v-text-field>
               </v-col>
@@ -454,12 +475,7 @@
           <v-icon start icon="mdi-close"></v-icon>
           İptal
         </v-btn>
-        <v-btn
-          color="primary"
-          :loading="loading"
-          :disabled="!valid || loading"
-          @click="handleSubmit"
-        >
+        <v-btn color="primary" :loading="loading" @click="handleSubmit">
           <v-icon start icon="mdi-content-save"></v-icon>
           {{ editMode ? "Güncelle" : "Kaydet" }}
         </v-btn>
@@ -763,6 +779,18 @@ export default {
 
     const handleSubmit = async () => {
       try {
+        // Form validasyonunu kontrol et
+        const { valid } = await form.value.validate();
+        if (!valid) {
+          // Hatalı alanları bul ve ilk hataya scroll yap
+          const firstError = document.querySelector(".v-field--error");
+          if (firstError) {
+            firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+          return;
+        }
+
+        loading.value = true;
         console.log("Form data before submit:", formData.value);
 
         const formDataToSend = new FormData();
@@ -863,6 +891,8 @@ export default {
             "Beklenmeyen bir hata oluştu!"
           }`
         );
+      } finally {
+        loading.value = false;
       }
     };
 
